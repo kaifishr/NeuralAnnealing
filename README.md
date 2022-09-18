@@ -52,15 +52,16 @@ Even though simulated annealing is mainly used for combinatorial optimisation, i
 
 ### Discrete Optimisation
 
-Discrete steps of length $\{-1, 0, 1\}$ for every parameter dimension $\bm\omega$ are sampled uniformly at random followed $U \sim \mathcal{U}(\{-1, 0, 1\})$. The acceptance determines a random variable following a Bernoulli distribution $B \sim \mathcal{B}(p)$. Finally, a clamp function clamps the proposed step into the range $[a, b]$.
+Discrete steps of length $\{-1, 0, 1\}$ for every parameter dimension $\vec{\omega}$ are sampled uniformly at random followed $U \sim \mathcal{U}(\{-1, 0, 1\})$. The acceptance determines a random variable following a Bernoulli distribution $B \sim \mathcal{B}(p)$. Finally, a clamp function clamps the proposed step into the range $[a, b]$.
 
 $$\omega'_{n+1} = \omega_n + u \cdot b$$
+
 $$\omega_{n+1} = \max(\min(\omega_{n+1}', \omega_{\max}), \omega_{\min})$$
 
 
 ### Continuous Optimisation
 
-Continuous steps of in the range of $[-\gamma, \gamma]$ are sampled from a uniform distribution $U \sim \mathcal{U}(-\gamma, \gamma)$ for every parameter dimension of the weight vector $\bm\omega$. Acceptance of proposed steps are determined by a random variable following a Bernoulli distribution $B \sim \mathcal{B}(p)$. Thus, the proposed change is computed as follows
+Continuous steps of in the range of $[-\gamma, \gamma]$ are sampled from a uniform distribution $U \sim \mathcal{U}(-\gamma, \gamma)$ for every parameter dimension of the weight vector $\vec{\omega}$. Acceptance of proposed steps are determined by a random variable following a Bernoulli distribution $B \sim \mathcal{B}(p)$. Thus, the proposed change is computed as follows
 
 $$\omega_{n+1} = \omega_n + \gamma \cdot u \cdot b$$
 
@@ -80,3 +81,18 @@ Apart from the fact that one should probably not optimize neural networks with s
 Getting the hyperparameters for simulated annealing is a bit cumbersome. To optimize the weights of neural networks, involved a bit of trial and error to get the initial temperature as well as the annealing schedule right.
 
 Another difficulty regarding the neural networks, is the correct normalization of the network's predictions in case of discrete network parameters and step activation functions. It turns out that this is a crucial step before common loss functions can meaningfully applied.
+
+## Citation
+
+@misc{Fischer2022deepa,
+author={Fischer, Kai},
+title={simulated-annealing-with-jax},
+year={2022},
+publisher = {GitHub},
+journal = {GitHub repository},
+howpublished={\url{https://github.com/kaifishr/DeepAnnealing}},
+}
+
+## License
+
+MIT
