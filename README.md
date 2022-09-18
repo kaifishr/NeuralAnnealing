@@ -74,6 +74,7 @@ The following experiments tested simulated annealing for fully connected neural 
 <img src="docs/loss_accuracy.png" alt="isolated" width="420"/>
 </p>
 
+
 ## Discussion
 
 Apart from the fact that one should probably not optimize neural networks with simulated annealing, it is fun to play around with JAX and neural wetworks with discrete weights.
@@ -82,8 +83,10 @@ Getting the hyperparameters for simulated annealing is a bit cumbersome. To opti
 
 Another difficulty regarding the neural networks, is the correct normalization of the network's predictions in case of discrete network parameters and step activation functions. It turns out that this is a crucial step before common loss functions can meaningfully applied.
 
+
 ## Citation
 
+```bibtex
 @misc{Fischer2022deepa,
 author={Fischer, Kai},
 title={simulated-annealing-with-jax},
@@ -92,6 +95,8 @@ publisher = {GitHub},
 journal = {GitHub repository},
 howpublished={\url{https://github.com/kaifishr/DeepAnnealing}},
 }
+```
+
 
 ## License
 
