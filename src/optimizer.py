@@ -3,7 +3,6 @@ from typing import List
 
 import copy
 import math
-import numpy as np
 import os
 import random
 import time
@@ -22,10 +21,6 @@ from .utils import comp_loss_accuracy, one_hot
 
 class Optimizer:
     """Optimizer class for simulated annealing.
-
-    Check out https://jax.readthedocs.io/en/latest/jax-101/05-random-numbers.html#random-numbers-in-jax
-    to understand random numbers in JAX.
-    
     """
 
     def __init__(self, model: Model, criterion: Loss, scheduler: Scheduler, data: DataServer, config: dict):
@@ -51,8 +46,9 @@ class Optimizer:
         self.writer = SummaryWriter()
         self.key = jax.random.PRNGKey(0)
 
-        # Perturbation probability.
-        self.perturbation_probability = config["perturbation_probability"]
+        # Initial perturbation probability.
+        self.perturbation_probability = 1.0 
+
         self.stats_every_n_epochs = config["stats_every_n_epochs"]
 
         # Set perturbation method according to parameter type.
@@ -135,6 +131,8 @@ class Optimizer:
             epoch += 1
             temp = self.scheduler(temp, epoch)
 
+            self.perturbation_probability = (temp / self.temp_initial) + 0.05
+
         train_loss, train_accuracy = comp_loss_accuracy(self.model, self.loss, self.training_generator)
         test_loss, test_accuracy = comp_loss_accuracy(self.model, self.loss, self.test_generator)
         self.writer.add_scalar("Training/Loss", train_loss, epoch)
@@ -148,9 +146,6 @@ class Optimizer:
 
         self.writer.close()
         file.close()
-
-        for i, (weight, _) in enumerate(self.model.params):
-            np.save(f"weight_layer_{i+1}", np.array(weight))
 
     def perturb(self, params: List) -> None:
         """Perturbs weights.
@@ -171,7 +166,11 @@ class Optimizer:
         return params
 
     def _binary_perturb(self, x: DeviceArray) -> DeviceArray:
-        """Perturbs binary array."""
+        """Perturbs binary array.
+        
+        See also https://jax.readthedocs.io/en/latest/jax-101/05-random-numbers.html#random-numbers-in-jax
+        for how JAX handels random numbers.
+        """
         self.key, subkey1, subkey2 = jax.random.split(self.key, num=3)
         mask = (jax.random.uniform(key=subkey1, shape=x.shape) < self.perturbation_probability)
         perturbation = jax.random.randint(key=subkey2, shape=x.shape, minval=-1, maxval=2).astype(jnp.float32)
@@ -179,7 +178,11 @@ class Optimizer:
         return jnp.clip(a=out, a_min=0, a_max=1)
 
     def _trinary_perturb(self, x: DeviceArray) -> DeviceArray:
-        """Perturbs trinary array."""
+        """Perturbs trinary array.
+        
+        See also https://jax.readthedocs.io/en/latest/jax-101/05-random-numbers.html#random-numbers-in-jax
+        for how JAX handels random numbers.
+        """
         self.key, subkey1, subkey2 = jax.random.split(self.key, num=3)
         mask = (jax.random.uniform(key=subkey1, shape=x.shape) < self.perturbation_probability)
         perturbation = jax.random.randint(key=subkey2, shape=x.shape, minval=-1, maxval=2).astype(jnp.float32)

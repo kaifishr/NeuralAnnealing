@@ -68,7 +68,7 @@ $$\omega_{n+1} = \omega_n + \gamma \cdot u \cdot b$$
 
 ## Experiments
 
-The following experiments tested simulated annealing for fully connected neural networks with discrete trainable parameters and used an inhomogeneous annealing schedule. The networks consisted of 2 hidden layers with 32 neurons each. Networks were initialized randomly and identically when compared to different sets of optimization  parameterse. A good temperature found empirically was found to be $0.1$. The temperature schedule followed an exponential decay with $\gamma = 0.02$. The optimization stopped at a temperature of $1e-6$.
+The following experiments tested simulated annealing for fully connected neural networks with discrete trainable parameters and used an inhomogeneous annealing schedule. The networks consisted of 2 hidden layers with 32 neurons each. Networks were initialized randomly and identically when compared to different sets of optimization  parameterse. A good temperature found empirically was found to be $0.07$. The temperature schedule followed an exponential decay with $\gamma = 0.02$. The optimization stopped at a temperature of $1e-6$.
 
 <p align="center">
 <img src="docs/loss_accuracy.png" alt="isolated" width="420"/>

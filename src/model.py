@@ -97,7 +97,6 @@ def predict(params: DeviceArray, image: DeviceArray):
 
     # Normalize model output.
     # This is important for discrete networks to work.
-
     out = (out - jnp.min(out)) / (jnp.max(out) - jnp.min(out) + 1e-5)
 
     # out = out / out.sum()

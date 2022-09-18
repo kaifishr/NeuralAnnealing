@@ -10,23 +10,22 @@ from src.dataloader import DataServer
 from src.loss import MSELoss
 from src.model import Model
 from src.optimizer import Optimizer
-from src.scheduler import ExponentialScheduler
+from src.scheduler import ExponentialScheduler, LinearScheduler
 
 
 def run_experiment():
 
     config = {
-        "layer_sizes": (28**2, 512, 256, 128, 64, 10),
+        "layer_sizes": (28**2, 64, 64, 64, 10),
         "params_type": "trinary",        # binary, trinary
         "dataset": "mnist",
         "batch_size": 1024,
         "num_targets": 10,
-        "num_workers": 4,
-        "temp_initial": 0.07,
+        "num_workers": 2,
+        "temp_initial": 0.06,
         "temp_final": 1e-6,
         "gamma": 0.02,
         "device": "cpu",
-        "perturbation_probability": 0.01,   # TODO: Couple perturbation to temperature.
         "stats_every_n_epochs": 20,
     }
 

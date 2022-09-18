@@ -49,6 +49,19 @@ class ExponentialScheduler(Scheduler):
 
 class LinearScheduler(Scheduler):
     """Linear temperature decays."""
+    def __init__(self, temp_initial: float, iterations_max: int) -> None:
+        """Initializes scheduler for temperature."""
+        super().__init__()
+        self.temp_initial = temp_initial
+        self.iterations_max = iterations_max
+
+    def __call__(self, temp: float, iteration: int) -> None:
+        """Schedules temperature decrease."""
+        return self.temp_initial - iteration * (self.temp_initial / self.iterations_max)
+
+
+class LinearSchedulerv2(Scheduler):
+    """Linear temperature decays."""
     def __init__(self, gamma: float, min_temp: float = 0.0) -> None:
         """Initializes scheduler for temperature."""
         super().__init__()
