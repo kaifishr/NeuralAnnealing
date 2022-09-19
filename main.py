@@ -16,16 +16,16 @@ from src.scheduler import ExponentialScheduler, LinearScheduler
 def run_experiment():
 
     config = {
-        "layer_sizes": (28**2, 64, 64, 64, 10),
+        "layer_sizes": (28**2, 4096, 4096, 10),
         "params_type": "trinary",        # binary, trinary
         "dataset": "mnist",
         "batch_size": 1024,
         "num_targets": 10,
-        "num_workers": 2,
+        "num_workers": 4,
         "temp_initial": 0.06,
         "temp_final": 1e-6,
         "gamma": 0.02,
-        "device": "cpu",
+        "device": "gpu",
         "stats_every_n_epochs": 20,
     }
 

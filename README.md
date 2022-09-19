@@ -66,9 +66,21 @@ Continuous steps of in the range of $[-\gamma, \gamma]$ are sampled from a unifo
 $$\omega_{n+1} = \omega_n + \gamma \cdot u \cdot b$$
 
 
+### Perturbation Probability
+
+The previous two sections showed possible methods of taking discrete and continuous steps in parameter space. This section briefly discusses the perturbation probability $p
+$, that determines the amount of parameters changed at each iteration.
+
+This implementation couples the perturbation probability directly to the current temperature $T$ of the system leading to the following relation
+
+$$p = p_0 \cdot \frac{T}{T_0}$$
+
+with $p_0$ and $T_0$ representing the initial perturbation probability and initial temperature, respectively.
+
+
 ## Experiments
 
-The following experiments tested simulated annealing for fully connected neural networks with discrete trainable parameters and used an inhomogeneous annealing schedule. The networks consisted of 2 hidden layers with 32 neurons each. Networks were initialized randomly and identically when compared to different sets of optimization  parameterse. A good temperature found empirically was found to be $0.07$. The temperature schedule followed an exponential decay with $\gamma = 0.02$. The optimization stopped at a temperature of $1e-6$.
+The following experiments tested simulated annealing for fully connected neural networks with discrete trainable parameters and used an inhomogeneous annealing schedule. The networks consisted of 3 hidden layers with 2048 neurons each. Networks were initialized randomly and identically when compared to different sets of optimization  parameterse. A good temperature found empirically was found to be $0.06$. The temperature schedule followed an exponential decay with $\gamma = 0.02$. The optimization stopped at a temperature of $1e-6$.
 
 <p align="center">
 <img src="docs/loss_accuracy.png" alt="isolated" width="420"/>
@@ -78,6 +90,8 @@ The following experiments tested simulated annealing for fully connected neural 
 ## Discussion
 
 Apart from the fact that one should probably not optimize neural networks with simulated annealing, it is fun to play around with JAX and neural wetworks with discrete weights.
+
+Despite the high dimensionality of the neural network used with discrete trinary parameter configuration, ???% accuracy was achieved.
 
 Getting the hyperparameters for simulated annealing is a bit cumbersome. To optimize the weights of neural networks, involved a bit of trial and error to get the initial temperature as well as the annealing schedule right.
 

@@ -33,13 +33,14 @@ class ExponentialScheduler(Scheduler):
         self.gamma = gamma
         self.temp_initial = temp_initial
         self.temp_final = temp_final
+        self.total_iterations = None
 
         self._print_info()
         
     def _print_info(self) -> None:
         """Computes and prints required iterations to reach final temperature."""
-        iterations = int(math.ceil((1.0 / self.gamma) * math.log(self.temp_initial / self.temp_final)) + 1)
-        print(f"Required iterations: {iterations}")
+        self.total_iterations = int(math.ceil((1.0 / self.gamma) * math.log(self.temp_initial / self.temp_final)) + 1)
+        print(f"Required iterations: {self.total_iterations}")
 
     def __call__(self, temp: float, iteration: int) -> None:
         """Schedules temperature decrease."""

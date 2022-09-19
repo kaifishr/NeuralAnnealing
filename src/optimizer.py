@@ -39,11 +39,12 @@ class Optimizer:
         self.test_generator = data.get_test_dataloader()
 
         self.old_params = self.model.params 
-        self.new_params = None
 
         self.gamma = config["gamma"]
 
         self.writer = SummaryWriter()
+        self.file = open(os.path.join(self.writer.log_dir, "stats.txt"), "w")
+
         self.key = jax.random.PRNGKey(0)
 
         # Initial perturbation probability.
@@ -64,9 +65,6 @@ class Optimizer:
 
     def run(self):
         """Performs optimization for neural network."""
-
-        path = os.path.join(self.writer.log_dir, "stats.txt")
-        file = open(path, "w")
 
         temp = self.temp_initial
         epoch = 0
@@ -95,7 +93,7 @@ class Optimizer:
                     pass    # keep new weights in network
                     # Keep new parameters if new loss is smaller than old loss.
                     # self.model.params = self.model.params
-                    # todo: add line to save best configuration.
+                    # TODO: add line to save best configuration.
                     # if cost_new < cost_best:
                     #     self.params_best = copy.deepcopy(self.model.params)
                 elif (random.random() < math.exp(-delta_loss / temp)):
@@ -117,22 +115,25 @@ class Optimizer:
             self.writer.add_scalar("Training/Temperature", temp, epoch)
 
             if (epoch + 1) % self.stats_every_n_epochs == 0:
-                train_loss, train_accuracy = comp_loss_accuracy(self.model, self.loss, self.training_generator)
-                test_loss, test_accuracy = comp_loss_accuracy(self.model, self.loss, self.test_generator)
-                self.writer.add_scalar("Training/Loss", train_loss, epoch)
-                self.writer.add_scalar("Training/Accuracy", train_accuracy, epoch)
-                self.writer.add_scalar("Test/Loss", test_loss, epoch)
-                self.writer.add_scalar("Test/Accuracy", test_accuracy, epoch)
-                log = f"{epoch} {epoch_time:.2f} {train_loss:.4f} {train_accuracy:.4f} {test_loss:.4f} {test_accuracy:.4f}"
-                file.write(f"{log}\n")
-                file.flush()
-                print(log)
+                self._write_stats(epoch, epoch_time)
 
             epoch += 1
             temp = self.scheduler(temp, epoch)
 
-            self.perturbation_probability = (temp / self.temp_initial) + 0.05
+            # TODO: Add scheduler for perturbation.
+            self.perturbation_probability = (temp / self.temp_initial)# + 0.001
 
+        self._write_stats(epoch, epoch_time)
+
+        import numpy as np
+        for i, (weight, _) in enumerate(self.model.params):
+            np.save(f"weight_layer_{i+1}", np.array(weight))
+
+        self.writer.close()
+        self.file.close()
+
+    def _write_stats(self, epoch: int, epoch_time: float) -> None:
+        """Adds statistics to tensorboard."""
         train_loss, train_accuracy = comp_loss_accuracy(self.model, self.loss, self.training_generator)
         test_loss, test_accuracy = comp_loss_accuracy(self.model, self.loss, self.test_generator)
         self.writer.add_scalar("Training/Loss", train_loss, epoch)
@@ -140,12 +141,9 @@ class Optimizer:
         self.writer.add_scalar("Test/Loss", test_loss, epoch)
         self.writer.add_scalar("Test/Accuracy", test_accuracy, epoch)
         log = f"{epoch} {epoch_time:.2f} {train_loss:.4f} {train_accuracy:.4f} {test_loss:.4f} {test_accuracy:.4f}"
-        file.write(f"{log}\n")
-        file.flush()
+        self.file.write(f"{log}\n")
+        self.file.flush()
         print(log)
-
-        self.writer.close()
-        file.close()
 
     def perturb(self, params: List) -> None:
         """Perturbs weights.
