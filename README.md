@@ -89,13 +89,11 @@ The following experiments tested simulated annealing for fully connected neural 
 
 ## Discussion
 
-Apart from the fact that one should probably not optimize neural networks with simulated annealing, it is fun to play around with JAX and neural wetworks with discrete weights.
+Apart from the fact that one should probably not optimize neural networks with simulated annealing, it is fun to play around with JAX and neural wetworks with discrete weights. Despite the high dimensionality of the used neural network, an accuracy of over 80% was achieved.
 
-Despite the high dimensionality of the neural network used with discrete trinary parameter configuration, ???% accuracy was achieved.
+Getting the hyperparameters right for simulated annealing is a bit cumbersome. It required quite a bit of trial and error to get the initial temperature as well as the annealing schedule right.
 
-Getting the hyperparameters for simulated annealing is a bit cumbersome. To optimize the weights of neural networks, involved a bit of trial and error to get the initial temperature as well as the annealing schedule right.
-
-Another difficulty regarding the neural networks, is the correct normalization of the network's predictions in case of discrete network parameters and step activation functions. It turns out that this is a crucial step before common loss functions can meaningfully applied.
+Another difficulty regarding the neural networks is the correct normalization of the network's predictions in case of discrete network parameters and step activation functions. It turns out that this is a crucial step before common loss functions can be meaningfully applied.
 
 
 ## Citation
