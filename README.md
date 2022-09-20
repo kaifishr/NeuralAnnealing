@@ -68,8 +68,7 @@ $$\omega_{n+1} = \omega_n + \gamma \cdot u \cdot b$$
 
 ### Perturbation Probability
 
-The previous two sections showed possible methods of taking discrete and continuous steps in parameter space. This section briefly discusses the perturbation probability $p
-$, that determines the amount of parameters changed at each iteration.
+The previous two sections showed possible methods of taking discrete and continuous steps in parameter space. This section briefly discusses the perturbation probability $p$, that determines the amount of parameters changed at each iteration.
 
 This implementation couples the perturbation probability directly to the current temperature $T$ of the system leading to the following relation
 
