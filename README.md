@@ -79,7 +79,7 @@ with $p_0$ and $T_0$ representing the initial perturbation probability and initi
 
 ## Experiments
 
-The following experiments tested simulated annealing for fully connected neural networks with discrete trainable parameters and used an inhomogeneous annealing schedule. The networks consisted of 3 hidden layers with 2048 neurons each. Networks were initialized randomly and identically when compared to different sets of optimization  parameterse. A good temperature found empirically was found to be $0.06$. The temperature schedule followed an exponential decay with $\gamma = 0.02$. The optimization stopped at a temperature of $1e-6$.
+The following experiments tested simulated annealing for fully connected neural networks with discrete trainable parameters and used an inhomogeneous annealing schedule. The networks consisted of 3 hidden layers with 2048 neurons each. Networks were initialized randomly and identically when compared to different sets of optimization  parameters. The network was trained with a batch size of 512. A good temperature found empirically was found to be $T_0 = 0.005$. The temperature schedule followed an exponential decay with $\gamma = 0.02$. The optimization stopped at a temperature of $1e-6$. 
 
 <p align="center">
 <img src="docs/loss_accuracy.png" alt="isolated" width="420"/>
@@ -94,11 +94,17 @@ Getting the hyperparameters right for simulated annealing is a bit cumbersome. I
 
 Another difficulty regarding the neural networks is the correct normalization of the network's predictions in case of discrete network parameters and step activation functions. It turns out that this is a crucial step before common loss functions can be meaningfully applied.
 
+## TODOs
+
+- Improve performance of random permutation.
+- Save best model during training.
+- Check `numpy_collate()` for efficiency.
+
 
 ## Citation
 
 ```bibtex
-@misc{Fischer2022deepa,
+@misc{Fischer2022da,
 author={Fischer, Kai},
 title={simulated-annealing-with-jax},
 year={2022},

@@ -93,7 +93,6 @@ class Optimizer:
                     pass    # keep new weights in network
                     # Keep new parameters if new loss is smaller than old loss.
                     # self.model.params = self.model.params
-                    # TODO: add line to save best configuration.
                     # if cost_new < cost_best:
                     #     self.params_best = copy.deepcopy(self.model.params)
                 elif (random.random() < math.exp(-delta_loss / temp)):
@@ -124,10 +123,6 @@ class Optimizer:
             self.perturbation_probability = (temp / self.temp_initial)# + 0.001
 
         self._write_stats(epoch, epoch_time)
-
-        import numpy as np
-        for i, (weight, _) in enumerate(self.model.params):
-            np.save(f"weight_layer_{i+1}", np.array(weight))
 
         self.writer.close()
         self.file.close()

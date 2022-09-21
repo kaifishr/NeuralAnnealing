@@ -16,7 +16,6 @@ def one_hot(x, k, dtype=jnp.float32):
 
 
 def numpy_collate(batch):
-    """TODO: Check for efficiency."""
     if isinstance(batch[0], np.ndarray):
         return np.stack(batch)
     elif isinstance(batch[0], (tuple, list)):
