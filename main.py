@@ -1,41 +1,38 @@
-"""Parameter optimization using simulated annealing.
-
-Script performs neural network parameter optimization
-using simulated annealing.
-
-"""
+"""Neural network parameter optimization with simulated annealing."""
 
 import jax
 
 from src.dataloader import DataServer
-from src.loss import MSELoss
+from src.loss import CrossEntropyLoss
 from src.model import Model
 from src.optimizer import Optimizer
-from src.scheduler import ExponentialScheduler, LinearScheduler
+from src.scheduler import ExponentialScheduler
 
 
-def run_experiment():
+def run_classification():
 
     config = {
-        "layer_sizes": (28**2, 2048, 2048, 2048, 10),
-        "params_type": "trinary",  # binary, trinary
+        "layer_sizes": (28**2, 64, 64, 10),
         "dataset": "mnist",
-        "batch_size": 512,
+        "batch_size": 500,
         "num_targets": 10,
         "num_workers": 4,
-        "temp_initial": 0.06,
+        "temp_initial": 0.001,
         "temp_final": 1e-6,
-        "gamma": 0.02,
-        "device": "gpu",
-        "stats_every_n_epochs": 20,
+        # "perturbation_prob": 0.01,
+        # "perturbation_size": 0.01,
+        "gamma": 0.003,
+        "device": "cpu",
+        "stats_every_n_epochs": 10,
     }
 
     if config["device"] == "cpu":
         jax.config.update("jax_platform_name", "cpu")
 
     data = DataServer(config=config)
+
     model = Model(config=config)
-    criterion = MSELoss()
+    criterion = CrossEntropyLoss()
     scheduler = ExponentialScheduler(
         gamma=config["gamma"],
         temp_initial=config["temp_initial"],
@@ -43,10 +40,15 @@ def run_experiment():
     )
 
     optimizer = Optimizer(
-        model=model, criterion=criterion, scheduler=scheduler, data=data, config=config
+        model=model,
+        criterion=criterion,
+        scheduler=scheduler,
+        data=data,
+        config=config,
     )
+
     optimizer.run()
 
 
 if __name__ == "__main__":
-    run_experiment()
+    run_classification()

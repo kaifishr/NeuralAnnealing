@@ -1,7 +1,7 @@
 """Script holds classes for different loss types."""
 
 import jax.numpy as jnp
-from jaxlib.xla_extension import DeviceArray
+from jaxlib.xla_extension import ArrayImpl
 from jax.scipy.special import logsumexp
 
 
@@ -13,7 +13,7 @@ class Loss(object):
     ) -> None:
         """Initializes base class."""
 
-    def __call__(self, target: DeviceArray, pred: DeviceArray) -> DeviceArray:
+    def __call__(self, target: ArrayImpl, pred: ArrayImpl) -> ArrayImpl:
         """Computes mean squared error loss."""
         raise NotImplementedError
 
@@ -26,7 +26,7 @@ class MSELoss(Loss):
         """Initializes mean squared error loss."""
         super().__init__()
 
-    def __call__(self, target: DeviceArray, pred: DeviceArray) -> DeviceArray:
+    def __call__(self, target: ArrayImpl, pred: ArrayImpl) -> ArrayImpl:
         """Computes mean squared error loss.
 
         Args:
@@ -44,7 +44,7 @@ class CrossEntropyLoss(Loss):
         """Initializes cross entropy loss."""
         super().__init__()
 
-    def __call__(self, target: DeviceArray, pred: DeviceArray) -> DeviceArray:
+    def __call__(self, target: ArrayImpl, pred: ArrayImpl) -> ArrayImpl:
         """Computes cross entropy loss.
 
         Args:

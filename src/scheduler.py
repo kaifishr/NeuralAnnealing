@@ -20,7 +20,6 @@ class PowerScheduler(Scheduler):
     """Decays the temperature by gamma every iteration."""
 
     def __init__(self, gamma: float) -> None:
-        """Initializes scheduler for temperature."""
         super().__init__()
         self.gamma = gamma
 
@@ -33,7 +32,6 @@ class ExponentialScheduler(Scheduler):
     """Decays temperature exponentially."""
 
     def __init__(self, gamma: float, temp_initial: float, temp_final: float) -> None:
-        """Initializes scheduler for temperature."""
         super().__init__()
         self.gamma = gamma
         self.temp_initial = temp_initial
@@ -53,7 +51,6 @@ class ExponentialScheduler(Scheduler):
         print(f"Required iterations: {self.total_iterations}")
 
     def __call__(self, temp: float, iteration: int) -> None:
-        """Schedules temperature decrease."""
         temp = self.temp_initial * math.exp(-self.gamma * iteration)
         return temp
 
@@ -62,7 +59,6 @@ class LinearScheduler(Scheduler):
     """Linear temperature decays."""
 
     def __init__(self, temp_initial: float, iterations_max: int) -> None:
-        """Initializes scheduler for temperature."""
         super().__init__()
         self.temp_initial = temp_initial
         self.iterations_max = iterations_max
@@ -76,7 +72,6 @@ class LinearSchedulerv2(Scheduler):
     """Linear temperature decays."""
 
     def __init__(self, gamma: float, min_temp: float = 0.0) -> None:
-        """Initializes scheduler for temperature."""
         super().__init__()
         self.gamma = gamma
         self.min_temp = min_temp
@@ -98,7 +93,6 @@ class CosineAnnealingScheduler(Scheduler):
     def __init__(
         self, temp_min: float, temp_max: float, iter_per_cycle: int, gamma: float = None
     ) -> None:
-        """Initializes scheduler for temperature."""
         super().__init__()
         self.temp_min = temp_min
         self.temp_max = temp_max

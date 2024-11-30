@@ -96,9 +96,7 @@ Another difficulty regarding the neural networks is the correct normalization of
 
 ## TODOs
 
-- Improve performance of random permutation.
 - Save best model during training.
-- Check `numpy_collate()` for efficiency.
 
 
 ## Citation

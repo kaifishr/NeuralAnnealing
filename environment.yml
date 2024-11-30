@@ -1,0 +1,12 @@
+name: neural_annealing
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - pytorch
+  - jax
+  - jaxlib
+  - tensorboardX
+  - black
+# - pip

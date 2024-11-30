@@ -57,8 +57,7 @@ class DataServer:
                 [
                     transforms.ToTensor(),
                     # transforms.RandomErasing(),
-                    # transforms.RandomHorizontalFlip(),
-                    # transforms.RandomVerticalFlip(),
+                    transforms.RandomHorizontalFlip(),
                     transforms.Normalize(mean=mean, std=std),
                     NormFlattenCast(),
                 ]
