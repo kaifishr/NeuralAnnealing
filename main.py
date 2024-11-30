@@ -4,6 +4,7 @@ Script performs neural network parameter optimization
 using simulated annealing.
 
 """
+
 import jax
 
 from src.dataloader import DataServer
@@ -17,7 +18,7 @@ def run_experiment():
 
     config = {
         "layer_sizes": (28**2, 2048, 2048, 2048, 10),
-        "params_type": "trinary",        # binary, trinary
+        "params_type": "trinary",  # binary, trinary
         "dataset": "mnist",
         "batch_size": 512,
         "num_targets": 10,
@@ -30,23 +31,19 @@ def run_experiment():
     }
 
     if config["device"] == "cpu":
-        jax.config.update('jax_platform_name', 'cpu')
+        jax.config.update("jax_platform_name", "cpu")
 
     data = DataServer(config=config)
     model = Model(config=config)
     criterion = MSELoss()
     scheduler = ExponentialScheduler(
-        gamma=config["gamma"], 
+        gamma=config["gamma"],
         temp_initial=config["temp_initial"],
-        temp_final=config["temp_final"]
+        temp_final=config["temp_final"],
     )
 
     optimizer = Optimizer(
-        model=model, 
-        criterion=criterion, 
-        scheduler=scheduler,
-        data=data,
-        config=config
+        model=model, criterion=criterion, scheduler=scheduler, data=data, config=config
     )
     optimizer.run()
 

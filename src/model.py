@@ -1,5 +1,6 @@
 """Fully connected neural networks.
 """
+
 from typing import Tuple
 
 import jax.numpy as jnp
@@ -33,31 +34,46 @@ class Model:
     def init_params(self, sizes: list, key: DeviceArray):
         """Initialize all layers for a fully-connected neural network with sizes 'sizes'"""
         keys = jax.random.split(key, len(sizes))
-        return [self._random_layer_params(fan_in, fan_out, key) for fan_in, fan_out, key in zip(sizes[:-1], sizes[1:], keys)]
+        return [
+            self._random_layer_params(fan_in, fan_out, key)
+            for fan_in, fan_out, key in zip(sizes[:-1], sizes[1:], keys)
+        ]
 
     @staticmethod
     def _random_float_params(fan_in: int, fan_out: int, key: DeviceArray):
         """A helper function to randomly initialize weights and biases for a dense neural network layer"""
         w_key, _ = jax.random.split(key)
         scale = jnp.sqrt(2.0 / fan_in)
-        w = scale * jax.random.normal(w_key, (fan_out, fan_in)) 
-        b = jnp.zeros(shape=(fan_out, ))
+        w = scale * jax.random.normal(w_key, (fan_out, fan_in))
+        b = jnp.zeros(shape=(fan_out,))
         return w, b
 
     @staticmethod
-    def _random_binary_params(fan_in: int, fan_out: int, key: DeviceArray) -> Tuple[DeviceArray]:
+    def _random_binary_params(
+        fan_in: int, fan_out: int, key: DeviceArray
+    ) -> Tuple[DeviceArray]:
         """Randomly initializes binary [0, 1] weights and biases."""
         w_key, b_key = jax.random.split(key)
-        w = jax.random.randint(w_key, (fan_out, fan_in), minval=0, maxval=2).astype(jnp.float32)
-        b = jax.random.randint(b_key, (fan_out, ), minval=0, maxval=2).astype(jnp.float32)
+        w = jax.random.randint(w_key, (fan_out, fan_in), minval=0, maxval=2).astype(
+            jnp.float32
+        )
+        b = jax.random.randint(b_key, (fan_out,), minval=0, maxval=2).astype(
+            jnp.float32
+        )
         return w, b
 
     @staticmethod
-    def _random_trinary_params(fan_in: int, fan_out: int, key: DeviceArray) -> Tuple[DeviceArray]:
+    def _random_trinary_params(
+        fan_in: int, fan_out: int, key: DeviceArray
+    ) -> Tuple[DeviceArray]:
         """Randomly initializes trinary [-1, 0, 1] weights and biases."""
         w_key, b_key = jax.random.split(key)
-        w = jax.random.randint(w_key, (fan_out, fan_in), minval=-1, maxval=2).astype(jnp.float32)
-        b = jax.random.randint(b_key, (fan_out, ), minval=-1, maxval=2).astype(jnp.float32)
+        w = jax.random.randint(w_key, (fan_out, fan_in), minval=-1, maxval=2).astype(
+            jnp.float32
+        )
+        b = jax.random.randint(b_key, (fan_out,), minval=-1, maxval=2).astype(
+            jnp.float32
+        )
         return w, b
 
     def step(self, x: DeviceArray, y: DeviceArray, temperature: float):
@@ -79,7 +95,7 @@ def heaviside(x: DeviceArray) -> DeviceArray:
 
 def sign(x: DeviceArray) -> DeviceArray:
     """Heaviside activation function returning -1 or 1."""
-    return jnp.sign(x) 
+    return jnp.sign(x)
 
 
 def predict(params: DeviceArray, image: DeviceArray):
@@ -102,4 +118,4 @@ def predict(params: DeviceArray, image: DeviceArray):
     # out = out / out.sum()
     out = jax.nn.softmax(out)
 
-    return out 
+    return out

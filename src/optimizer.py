@@ -1,4 +1,5 @@
 """Optimizer class for simulated annealing."""
+
 from typing import List
 
 import copy
@@ -16,17 +17,23 @@ from .dataloader import DataServer
 from .loss import Loss
 from .model import Model
 from .scheduler import Scheduler
-from .utils import comp_loss_accuracy, one_hot 
+from .utils import comp_loss_accuracy, one_hot
 
 
 class Optimizer:
-    """Optimizer class for simulated annealing.
-    """
+    """Optimizer class for simulated annealing."""
 
-    def __init__(self, model: Model, criterion: Loss, scheduler: Scheduler, data: DataServer, config: dict):
+    def __init__(
+        self,
+        model: Model,
+        criterion: Loss,
+        scheduler: Scheduler,
+        data: DataServer,
+        config: dict,
+    ):
         """Initializes Optimizer class."""
 
-        self.model = model 
+        self.model = model
         self.loss = criterion
         self.scheduler = scheduler
         self.data = data
@@ -38,7 +45,7 @@ class Optimizer:
         self.training_generator = data.get_training_dataloader()
         self.test_generator = data.get_test_dataloader()
 
-        self.old_params = self.model.params 
+        self.old_params = self.model.params
 
         self.gamma = config["gamma"]
 
@@ -48,7 +55,7 @@ class Optimizer:
         self.key = jax.random.PRNGKey(0)
 
         # Initial perturbation probability.
-        self.perturbation_probability = 1.0 
+        self.perturbation_probability = 1.0
 
         self.stats_every_n_epochs = config["stats_every_n_epochs"]
 
@@ -89,16 +96,16 @@ class Optimizer:
 
                 delta_loss = loss_new_params - loss_old_params
 
-                if (delta_loss < 0):
-                    pass    # keep new weights in network
+                if delta_loss < 0:
+                    pass  # keep new weights in network
                     # Keep new parameters if new loss is smaller than old loss.
                     # self.model.params = self.model.params
                     # if cost_new < cost_best:
                     #     self.params_best = copy.deepcopy(self.model.params)
-                elif (random.random() < math.exp(-delta_loss / temp)):
+                elif random.random() < math.exp(-delta_loss / temp):
                     pass
                     # Keep new parameters with a certain probability anyways.
-                    # self.model.params = self.model.params 
+                    # self.model.params = self.model.params
                 else:
                     self.model.params = self.old_params
 
@@ -108,8 +115,12 @@ class Optimizer:
 
             epoch_time = time.time() - start_time
 
-            self.writer.add_scalar("Training/LossOldParams", running_loss_old / running_counter, epoch)
-            self.writer.add_scalar("Training/LossNewParams", running_loss_new / running_counter, epoch)
+            self.writer.add_scalar(
+                "Training/LossOldParams", running_loss_old / running_counter, epoch
+            )
+            self.writer.add_scalar(
+                "Training/LossNewParams", running_loss_new / running_counter, epoch
+            )
             self.writer.add_scalar("Training/TimePerEpoch", epoch_time, epoch)
             self.writer.add_scalar("Training/Temperature", temp, epoch)
 
@@ -120,7 +131,7 @@ class Optimizer:
             temp = self.scheduler(temp, epoch)
 
             # TODO: Add scheduler for perturbation.
-            self.perturbation_probability = (temp / self.temp_initial)# + 0.001
+            self.perturbation_probability = temp / self.temp_initial  # + 0.001
 
         self._write_stats(epoch, epoch_time)
 
@@ -129,8 +140,12 @@ class Optimizer:
 
     def _write_stats(self, epoch: int, epoch_time: float) -> None:
         """Adds statistics to tensorboard."""
-        train_loss, train_accuracy = comp_loss_accuracy(self.model, self.loss, self.training_generator)
-        test_loss, test_accuracy = comp_loss_accuracy(self.model, self.loss, self.test_generator)
+        train_loss, train_accuracy = comp_loss_accuracy(
+            self.model, self.loss, self.training_generator
+        )
+        test_loss, test_accuracy = comp_loss_accuracy(
+            self.model, self.loss, self.test_generator
+        )
         self.writer.add_scalar("Training/Loss", train_loss, epoch)
         self.writer.add_scalar("Training/Accuracy", train_accuracy, epoch)
         self.writer.add_scalar("Test/Loss", test_loss, epoch)
@@ -144,8 +159,8 @@ class Optimizer:
         """Perturbs weights.
 
         Given the current configuration 'params', this function generates
-        another neighbouring configuration to which the system may move. 
-        
+        another neighbouring configuration to which the system may move.
+
         Make deep copy of weights.
         """
         # Make a copy of the old parameters.
@@ -160,24 +175,34 @@ class Optimizer:
 
     def _binary_perturb(self, x: DeviceArray) -> DeviceArray:
         """Perturbs binary array.
-        
+
         See also https://jax.readthedocs.io/en/latest/jax-101/05-random-numbers.html#random-numbers-in-jax
         for how JAX handels random numbers.
         """
         self.key, subkey1, subkey2 = jax.random.split(self.key, num=3)
-        mask = (jax.random.uniform(key=subkey1, shape=x.shape) < self.perturbation_probability)
-        perturbation = jax.random.randint(key=subkey2, shape=x.shape, minval=-1, maxval=2).astype(jnp.float32)
+        mask = (
+            jax.random.uniform(key=subkey1, shape=x.shape)
+            < self.perturbation_probability
+        )
+        perturbation = jax.random.randint(
+            key=subkey2, shape=x.shape, minval=-1, maxval=2
+        ).astype(jnp.float32)
         out = x + mask * perturbation
         return jnp.clip(a=out, a_min=0, a_max=1)
 
     def _trinary_perturb(self, x: DeviceArray) -> DeviceArray:
         """Perturbs trinary array.
-        
+
         See also https://jax.readthedocs.io/en/latest/jax-101/05-random-numbers.html#random-numbers-in-jax
         for how JAX handels random numbers.
         """
         self.key, subkey1, subkey2 = jax.random.split(self.key, num=3)
-        mask = (jax.random.uniform(key=subkey1, shape=x.shape) < self.perturbation_probability)
-        perturbation = jax.random.randint(key=subkey2, shape=x.shape, minval=-1, maxval=2).astype(jnp.float32)
+        mask = (
+            jax.random.uniform(key=subkey1, shape=x.shape)
+            < self.perturbation_probability
+        )
+        perturbation = jax.random.randint(
+            key=subkey2, shape=x.shape, minval=-1, maxval=2
+        ).astype(jnp.float32)
         out = x + mask * perturbation
         return jnp.clip(a=out, a_min=-1, a_max=1)

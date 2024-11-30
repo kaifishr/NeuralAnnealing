@@ -1,5 +1,6 @@
 """PyTorch-based dataloader for JAX.
 """
+
 import numpy as np
 from pathlib import Path
 
@@ -35,7 +36,7 @@ class DataServer:
     def __init__(self, config: dict) -> None:
 
         self.dataset = config["dataset"]
-        self.batch_size =  config["batch_size"]
+        self.batch_size = config["batch_size"]
         self.num_targets = config["num_targets"]
         self.num_workers = config["num_workers"]
 
@@ -45,48 +46,72 @@ class DataServer:
         if self.dataset == "fashion_mnist":
 
             self.train_dataset = FashionMNIST(root=root_dir, train=True, download=True)
-            mean = float(jnp.array(self.train_dataset.data / 255.0, dtype=jnp.float32).mean())
-            std = float(jnp.array(self.train_dataset.data / 255.0, dtype=jnp.float32).std())
+            mean = float(
+                jnp.array(self.train_dataset.data / 255.0, dtype=jnp.float32).mean()
+            )
+            std = float(
+                jnp.array(self.train_dataset.data / 255.0, dtype=jnp.float32).std()
+            )
 
-            train_transforms = transforms.Compose([
-                transforms.ToTensor(),
-                # transforms.RandomErasing(),
-                # transforms.RandomHorizontalFlip(),
-                # transforms.RandomVerticalFlip(),
-                transforms.Normalize(mean=mean, std=std),
-                NormFlattenCast()
-                ])
+            train_transforms = transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    # transforms.RandomErasing(),
+                    # transforms.RandomHorizontalFlip(),
+                    # transforms.RandomVerticalFlip(),
+                    transforms.Normalize(mean=mean, std=std),
+                    NormFlattenCast(),
+                ]
+            )
 
-            test_transforms = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean=mean, std=std),
-                NormFlattenCast(),
-            ])
+            test_transforms = transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=mean, std=std),
+                    NormFlattenCast(),
+                ]
+            )
 
-            self.train_dataset = FashionMNIST(root=root_dir, train=True, download=True, transform=train_transforms)
-            self.test_dataset = FashionMNIST(root=root_dir, train=False, download=True, transform=test_transforms)
+            self.train_dataset = FashionMNIST(
+                root=root_dir, train=True, download=True, transform=train_transforms
+            )
+            self.test_dataset = FashionMNIST(
+                root=root_dir, train=False, download=True, transform=test_transforms
+            )
 
         elif self.dataset == "mnist":
 
             self.train_dataset = MNIST(root=root_dir, train=True, download=True)
-            mean = float(jnp.array(self.train_dataset.data / 255.0, dtype=jnp.float32).mean())
-            std = float(jnp.array(self.train_dataset.data / 255.0, dtype=jnp.float32).std())
+            mean = float(
+                jnp.array(self.train_dataset.data / 255.0, dtype=jnp.float32).mean()
+            )
+            std = float(
+                jnp.array(self.train_dataset.data / 255.0, dtype=jnp.float32).std()
+            )
 
-            train_transforms = transforms.Compose([
-                transforms.ToTensor(),
-                # transforms.RandomErasing(),
-                transforms.Normalize(mean=mean, std=std),
-                NormFlattenCast()
-                ])
+            train_transforms = transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    # transforms.RandomErasing(),
+                    transforms.Normalize(mean=mean, std=std),
+                    NormFlattenCast(),
+                ]
+            )
 
-            test_transforms = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean=mean, std=std),
-                NormFlattenCast(),
-            ])
+            test_transforms = transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=mean, std=std),
+                    NormFlattenCast(),
+                ]
+            )
 
-            self.train_dataset = MNIST(root=root_dir, train=True, download=True, transform=train_transforms)
-            self.test_dataset = MNIST(root=root_dir, train=False, download=True, transform=test_transforms)
+            self.train_dataset = MNIST(
+                root=root_dir, train=True, download=True, transform=train_transforms
+            )
+            self.test_dataset = MNIST(
+                root=root_dir, train=False, download=True, transform=test_transforms
+            )
 
         else:
             raise NotImplementedError(f"Dataset {self.dataset} not available.")
@@ -94,8 +119,8 @@ class DataServer:
     def get_training_dataloader(self) -> DataLoader:
         """Returns training data generator."""
         training_dataloader = DataLoader(
-            dataset=self.train_dataset, 
-            batch_size=self.batch_size, 
+            dataset=self.train_dataset,
+            batch_size=self.batch_size,
             num_workers=self.num_workers,
             collate_fn=numpy_collate,
             pin_memory=True,
@@ -106,8 +131,8 @@ class DataServer:
     def get_test_dataloader(self) -> DataLoader:
         """Returns test data generator."""
         test_dataloader = DataLoader(
-            dataset=self.test_dataset, 
-            batch_size=self.batch_size, 
+            dataset=self.test_dataset,
+            batch_size=self.batch_size,
             num_workers=self.num_workers,
             collate_fn=numpy_collate,
             pin_memory=True,

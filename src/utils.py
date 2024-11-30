@@ -1,4 +1,5 @@
 """Script for helper functions."""
+
 from typing import Callable
 
 import jax.numpy as jnp
@@ -10,7 +11,7 @@ from .model import Model
 
 def one_hot(x, k, dtype=jnp.float32):
     """Create a one-hot encoding of x of size k."""
-    return jnp.array(x[:, None] == jnp.arange(k), dtype) 
+    return jnp.array(x[:, None] == jnp.arange(k), dtype)
 
 
 def comp_loss_accuracy(model: Model, loss: Callable, data_generator: DataLoader):
@@ -43,7 +44,7 @@ def comp_loss_accuracy(model: Model, loss: Callable, data_generator: DataLoader)
         running_accuracy += batch_accuracy
         running_counter += len(images)
 
-    total_loss = running_loss / running_counter 
+    total_loss = running_loss / running_counter
     total_accuracy = running_accuracy / running_counter
 
     return float(total_loss), float(total_accuracy)

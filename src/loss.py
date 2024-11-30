@@ -1,4 +1,5 @@
 """Script holds classes for different loss types."""
+
 import jax.numpy as jnp
 from jaxlib.xla_extension import DeviceArray
 from jax.scipy.special import logsumexp
@@ -7,7 +8,9 @@ from jax.scipy.special import logsumexp
 class Loss(object):
     """Abstract base class for losses."""
 
-    def __init__(self, ) -> None:
+    def __init__(
+        self,
+    ) -> None:
         """Initializes base class."""
 
     def __call__(self, target: DeviceArray, pred: DeviceArray) -> DeviceArray:
@@ -17,7 +20,9 @@ class Loss(object):
 
 class MSELoss(Loss):
 
-    def __init__(self, ) -> None:
+    def __init__(
+        self,
+    ) -> None:
         """Initializes mean squared error loss."""
         super().__init__()
 
@@ -33,7 +38,9 @@ class MSELoss(Loss):
 
 class CrossEntropyLoss(Loss):
 
-    def __init__(self, ) -> None:
+    def __init__(
+        self,
+    ) -> None:
         """Initializes cross entropy loss."""
         super().__init__()
 
