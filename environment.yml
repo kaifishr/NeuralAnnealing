@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python=3.10
   - pip
+  - libstdcxx-ng  # For box2d env
   - pip:
     - --upgrade pip
     - --upgrade "jax[cuda12]"
@@ -12,3 +13,5 @@ dependencies:
     - torchvision
     - tensorboard
     - black
+    - swig
+    - gymnasium[box2d]

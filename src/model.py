@@ -2,7 +2,6 @@ import jax
 import jax.numpy as jnp
 
 from jaxlib.xla_extension import ArrayImpl
-from jax.scipy.special import logsumexp
 
 
 def init_params(sizes: list, key: ArrayImpl):
@@ -21,23 +20,8 @@ def _init_params(fan_in: int, fan_out: int, key: ArrayImpl):
     return w, b
 
 
-def relu(x: ArrayImpl) -> ArrayImpl:
-    """Rectified Linear Unit activation function [0, inf]"""
-    return jnp.maximum(0.0, x)
-
-
-def heaviside(x: ArrayImpl) -> ArrayImpl:
-    """Heaviside activation function [0, 1]."""
-    return jnp.heaviside(x, 0.5)
-
-
-def sign(x: ArrayImpl) -> ArrayImpl:
-    """Heaviside activation function [-1, 1]."""
-    return jnp.sign(x)
-
-
 def predict(params: ArrayImpl, data: ArrayImpl):
-    """Per-example forward method."""
+    """Single-sample forward method."""
     out = data
     out = jax.lax.stop_gradient(out)
 
@@ -45,9 +29,9 @@ def predict(params: ArrayImpl, data: ArrayImpl):
 
     for w, b in layers:
         out = jnp.dot(w, out) + b
-        # out = heaviside(out)
-        # out = sign(out)
-        out = relu(out)
+        out = jax.nn.relu(out)
+        # out = jnp.heaviside(out, 0.0)
+        # out = jnp.sign(out)
 
     w, b = last
     logits = jnp.dot(w, out) + b
@@ -55,5 +39,4 @@ def predict(params: ArrayImpl, data: ArrayImpl):
     return logits
 
 
-# mlp = jax.jit(jax.vmap(predict, in_axes=(None, 0)))
 mlp = jax.jit(jax.vmap(predict, in_axes=(None, 0)))

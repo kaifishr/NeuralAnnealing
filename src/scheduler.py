@@ -1,5 +1,3 @@
-"""Script with temperature schedulers."""
-
 import math
 
 
@@ -12,7 +10,6 @@ class Scheduler:
         """Initializes abstract scheduler class."""
 
     def __call__(self, temp: float, iteration: int) -> None:
-        """Schedules temperature decrease."""
         raise NotImplementedError
 
 
@@ -24,7 +21,6 @@ class PowerScheduler(Scheduler):
         self.gamma = gamma
 
     def __call__(self, temp: float, iteration: int) -> None:
-        """Schedules temperature decrease."""
         return temp * self.gamma**iteration
 
 
@@ -41,7 +37,6 @@ class ExponentialScheduler(Scheduler):
         self._print_info()
 
     def _print_info(self) -> None:
-        """Computes and prints required iterations to reach final temperature."""
         self.total_iterations = int(
             math.ceil(
                 (1.0 / self.gamma) * math.log(self.temp_initial / self.temp_final)
@@ -64,7 +59,6 @@ class LinearScheduler(Scheduler):
         self.iterations_max = iterations_max
 
     def __call__(self, temp: float, iteration: int) -> None:
-        """Schedules temperature decrease."""
         return self.temp_initial - iteration * (self.temp_initial / self.iterations_max)
 
 
@@ -77,7 +71,6 @@ class LinearSchedulerv2(Scheduler):
         self.min_temp = min_temp
 
     def __call__(self, temp: float, iteration: int) -> None:
-        """Schedules temperature decrease."""
         new_temp = temp - self.gamma
         return new_temp if new_temp > self.min_temp else self.min_temp
 
@@ -101,7 +94,6 @@ class CosineAnnealingScheduler(Scheduler):
         self.gamma = gamma
 
     def __call__(self, temp: float, iteration: int) -> None:
-        """Schedules temperature decrease."""
         x = math.pi * (iteration / self.iter_per_cycle) % math.pi
         temp = self.temp_min + 0.5 * (self.temp_max - self.temp_min) * (
             1.0 + math.cos(x)

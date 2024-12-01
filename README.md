@@ -31,56 +31,19 @@ In a nutshell, simulated annealing selects at each iteration a randomly created 
 
 > *As an aside, Metropolis-type algorithms accept worse solutions with a certaint probability to explore the solution space and find globaly optimal solutions to avoid getting stuck in local optima. This is in strong contrast to greedy Monte Carlo (local search) optimization algorithms, that only accept lower cost solutions.*
 
-The following pseudocode shows simulated annealing for neural networks.
-
-```python
-def simulated_annealing(temp_initial: float, temp_final: float):
-    temp = temp_initial
-
-    params_old = init_params()      # Generate some initial random configuration
-    params_best = params_old
-
-    while temp > temp_final:
-        params_new = neighbor_state(params_old)
-
-        if loss(params_new) <= loss(params_old):
-            params_old = params_new
-            
-            if loss(params_new) <= loss(params_best):
-                params_best = params_new
-
-        # Accept configuration associated with higher loss?
-        elif exp((loss(params_old) - loss(params_new)) / temp) > random.random():
-            params_old = params_new
-            
-        temp = schedule(temp)
-```
-
-
 ## Continuous Optimisation
 
 Even though simulated annealing is mainly used for combinatorial optimisation, it can be extended to continuous optimisation which is helpful when dealing with neural networks representing continuous functions with floating point weights.
 
 [Corana et al.](https://dl.acm.org/doi/10.1145/29380.29864) extended simulated annealing to the continuous case by using a homogeneous annealing schedule. A homogeneous annealing schedule keeps the temperature constant until the system reaches an equilibrium state before the temperature is lowered by a small amount. In contrast, inhomogeneous annealing schedules reduce the temperature after each iteration.
 
-
 ## Methods
-
-### Discrete Optimisation
-
-Discrete steps of length $\{-1, 0, 1\}$ for every parameter dimension $\vec{\omega}$ are sampled uniformly at random followed $U \sim \mathcal{U}(\{-1, 0, 1\})$. The acceptance determines a random variable following a Bernoulli distribution $B \sim \mathcal{B}(p)$. Finally, a clamp function clamps the proposed step into the range $[a, b]$.
-
-$$\omega'_{n+1} = \omega_n + u \cdot b$$
-
-$$\omega_{n+1} = \max(\min(\omega_{n+1}', \omega_{\max}), \omega_{\min})$$
-
 
 ### Continuous Optimisation
 
 Continuous steps of in the range of $[-\gamma, \gamma]$ are sampled from a uniform distribution $U \sim \mathcal{U}(-\gamma, \gamma)$ for every parameter dimension of the weight vector $\vec{\omega}$. Acceptance of proposed steps are determined by a random variable following a Bernoulli distribution $B \sim \mathcal{B}(p)$. Thus, the proposed change is computed as follows
 
 $$\omega_{n+1} = \omega_n + \gamma \cdot u \cdot b$$
-
 
 ### Perturbation Probability
 
@@ -91,7 +54,6 @@ This implementation couples the perturbation probability directly to the current
 $$p = p_0 \cdot \frac{T}{T_0}$$
 
 with $p_0$ and $T_0$ representing the initial perturbation probability and initial temperature, respectively.
-
 
 ## Experiments
 

@@ -1,3 +1,4 @@
+import os
 import jax
 
 from src.dataloader import DataServer
@@ -6,22 +7,25 @@ from src.model import mlp
 from src.optimizer import Optimizer
 from src.scheduler import ExponentialScheduler
 
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.2"
+
 
 def run_classification():
 
     config = {
         "seed": 4444,
         "device": "gpu",
-        "dataset": "mnist",
+        "dataset": "fashion_mnist",  # mnist, fashion_mnist
         "layer_sizes": (28**2, 128, 128, 10),
         "batch_size": 500,
         "num_targets": 10,
-        "num_workers": 12,
-        "temp_initial": 0.001,
-        "temp_final": 1e-6,
+        "num_workers": 2,
+        "temp_initial": 0.002,
+        "temp_final": 1e-9,
+        "momentum": 0.2,
         "perturbation_prob": 0.02,
         "perturbation_size": 0.02,
-        "gamma": 0.004,
+        "gamma": 0.003,
         "stats_every_n_epochs": 10,
     }
 

@@ -17,7 +17,6 @@ def comp_loss_accuracy(
     loss: Callable,
     data_generator: DataLoader,
 ) -> tuple[float, float]:
-    """Computes loss and accuray for provided model and data."""
 
     num_targets = len(data_generator.dataset.classes)
 

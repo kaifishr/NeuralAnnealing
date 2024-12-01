@@ -6,7 +6,7 @@ from jax.nn import log_softmax
 from jax.scipy.special import logsumexp
 
 
-class Loss:
+class Criterion:
     def __init__(self) -> None:
         pass
 
@@ -14,7 +14,7 @@ class Loss:
         raise NotImplementedError
 
 
-class MSELoss(Loss):
+class MSELoss(Criterion):
 
     def __init__(self) -> None:
         super().__init__()
@@ -23,7 +23,7 @@ class MSELoss(Loss):
         return jnp.mean(jnp.square(target - pred))
 
 
-class CrossEntropyLoss(Loss):
+class CrossEntropyLoss(Criterion):
 
     def __init__(self) -> None:
         super().__init__()
@@ -31,3 +31,12 @@ class CrossEntropyLoss(Loss):
     def __call__(self, target: jax.Array, logits: jax.Array) -> jax.Array:
         log_probs = log_softmax(logits)
         return -jnp.mean(jnp.sum(target * log_probs, axis=-1))
+
+
+class MaxScore(Criterion):
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def __call__(self, score: jax.Array) -> jax.Array:
+        return -score
