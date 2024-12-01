@@ -3,10 +3,12 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python
-  - pytorch
-  - jax
-  - jaxlib
-  - tensorboardX
-  - black
-# - pip
+  - python=3.10
+  - pip
+  - pip:
+    - --upgrade pip
+    - --upgrade "jax[cuda12]"
+    - torch
+    - torchvision
+    - tensorboard
+    - black

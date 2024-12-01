@@ -1,7 +1,23 @@
 # Simulated Annealing with JAX
 
-This project uses JAX to perform simulated annealing (SA) optimization and applies it to small neural networks with interesting and rather unusual features such as binary and trinary trainable parameters and step functions as activation functions.
+Train neural networks with simulated annealing (SA) and JAX. As SA does not rely on gradients, rather unusual features such as step activation functions can be used for training.
 
+## Linux Installation
+
+```
+conda env create --file environment.yml
+conda activate neural_annealing
+python -m examples.classification
+```
+
+\\ ```
+\\ conda create --name neural_annealing
+\\ conda activate neural_annealing
+\\ conda install pip
+\\ pip install --upgrade pip
+\\ pip install --upgrade "jax[cuda12]"
+\\ pip install torch torchvision, tensorboard
+\\ ```
 
 ## Simulated Annealing
 

@@ -1,48 +1,24 @@
-import copy
-
 import jax
 import jax.numpy as jnp
 
 from jaxlib.xla_extension import ArrayImpl
+from jax.scipy.special import logsumexp
 
 
-class Model:
-    """Multilayer perceptron."""
+def init_params(sizes: list, key: ArrayImpl):
+    keys = jax.random.split(key, len(sizes))
+    return [
+        _init_params(fan_in=fan_in, fan_out=fan_out, key=key)
+        for fan_in, fan_out, key in zip(sizes[:-1], sizes[1:], keys)
+    ]
 
-    def __init__(self, config: dict):
 
-        layer_sizes = config["layer_sizes"]
-        self.params = self.init_params(layer_sizes, jax.random.PRNGKey(0))
-        self.params_tmp = copy.deepcopy(self.params)
-
-        # Make a batched version of the "predict" function using "vmap".
-        self._forward = jax.jit(jax.vmap(predict, in_axes=(None, 0)))
-        # self._forward = jax.vmap(predict, in_axes=(None, 0))
-
-    def init_params(self, sizes: list, key: ArrayImpl):
-        """Initialize all layers for a fully-connected neural network with sizes 'sizes'"""
-        keys = jax.random.split(key, len(sizes))
-        return [
-            self._init_params(fan_in=fan_in, fan_out=fan_out, key=key)
-            for fan_in, fan_out, key in zip(sizes[:-1], sizes[1:], keys)
-        ]
-
-    @staticmethod
-    def _init_params(fan_in: int, fan_out: int, key: ArrayImpl):
-        w_key, _ = jax.random.split(key)
-        scale = jnp.sqrt(2.0 / fan_in)
-        w = scale * jax.random.normal(w_key, (fan_out, fan_in))
-        b = jnp.zeros(shape=(fan_out,))
-        return w, b
-
-    # def step(self, x: ArrayImpl, y: ArrayImpl, temperature: float):
-    #     pass
-
-    def forward(self, x: ArrayImpl):
-        return self._forward(self.params, x)
-
-    def forward_tmp(self, x: ArrayImpl):
-        return self._forward(self.params_tmp, x)
+def _init_params(fan_in: int, fan_out: int, key: ArrayImpl):
+    w_key, _ = jax.random.split(key)
+    scale = jnp.sqrt(2.0 / fan_in)
+    w = scale * jax.random.normal(w_key, (fan_out, fan_in))
+    b = jnp.zeros(shape=(fan_out,))
+    return w, b
 
 
 def relu(x: ArrayImpl) -> ArrayImpl:
@@ -63,6 +39,7 @@ def sign(x: ArrayImpl) -> ArrayImpl:
 def predict(params: ArrayImpl, data: ArrayImpl):
     """Per-example forward method."""
     out = data
+    out = jax.lax.stop_gradient(out)
 
     *layers, last = params
 
@@ -76,3 +53,7 @@ def predict(params: ArrayImpl, data: ArrayImpl):
     logits = jnp.dot(w, out) + b
 
     return logits
+
+
+# mlp = jax.jit(jax.vmap(predict, in_axes=(None, 0)))
+mlp = jax.jit(jax.vmap(predict, in_axes=(None, 0)))

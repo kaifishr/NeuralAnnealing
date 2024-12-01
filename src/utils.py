@@ -1,20 +1,22 @@
-"""Script for helper functions."""
+import numpy
+import jax
+import jax.numpy as jnp
 
 from typing import Callable
-
-import jax.numpy as jnp
-import numpy as np
 from torch.utils.data import DataLoader
 
-from .model import Model
+
+def one_hot(x: numpy.ndarray, k: int, dtype=jnp.float32):
+    x_one_hot = jnp.array(x[:, None] == jnp.arange(k), dtype)
+    return x_one_hot
 
 
-def one_hot(x, k, dtype=jnp.float32):
-    """Create a one-hot encoding of x of size k."""
-    return jnp.array(x[:, None] == jnp.arange(k), dtype)
-
-
-def comp_loss_accuracy(model: Model, loss: Callable, data_generator: DataLoader):
+def comp_loss_accuracy(
+    model: callable,
+    params: list[tuple[jax.Array]],
+    loss: Callable,
+    data_generator: DataLoader,
+) -> tuple[float, float]:
     """Computes loss and accuray for provided model and data."""
 
     num_targets = len(data_generator.dataset.classes)
@@ -24,12 +26,12 @@ def comp_loss_accuracy(model: Model, loss: Callable, data_generator: DataLoader)
     running_counter = 0.0
 
     for images, targets in data_generator:
-        targets = one_hot(targets, num_targets)
+        targets = one_hot(x=targets, k=num_targets)
 
         images = jnp.atleast_2d(images)
         targets = jnp.atleast_2d(targets)
 
-        preds = model.forward(images)
+        preds = model(params, images)
 
         # Compute accuracy
         target_class = jnp.argmax(targets, axis=1)
@@ -40,7 +42,7 @@ def comp_loss_accuracy(model: Model, loss: Callable, data_generator: DataLoader)
         batch_loss = loss(targets, preds)
 
         # Accumulating stats
-        running_loss += batch_loss * len(images)
+        running_loss += batch_loss
         running_accuracy += batch_accuracy
         running_counter += len(images)
 

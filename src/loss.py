@@ -1,54 +1,33 @@
 """Script holds classes for different loss types."""
 
+import jax
 import jax.numpy as jnp
-from jaxlib.xla_extension import ArrayImpl
+from jax.nn import log_softmax
 from jax.scipy.special import logsumexp
 
 
-class Loss(object):
-    """Abstract base class for losses."""
+class Loss:
+    def __init__(self) -> None:
+        pass
 
-    def __init__(
-        self,
-    ) -> None:
-        """Initializes base class."""
-
-    def __call__(self, target: ArrayImpl, pred: ArrayImpl) -> ArrayImpl:
-        """Computes mean squared error loss."""
+    def __call__(self, target: jax.Array, pred: jax.Array) -> jax.Array:
         raise NotImplementedError
 
 
 class MSELoss(Loss):
 
-    def __init__(
-        self,
-    ) -> None:
-        """Initializes mean squared error loss."""
+    def __init__(self) -> None:
         super().__init__()
 
-    def __call__(self, target: ArrayImpl, pred: ArrayImpl) -> ArrayImpl:
-        """Computes mean squared error loss.
-
-        Args:
-            target: Ground truth labels.
-            pred: Model predictions.
-        """
+    def __call__(self, target: jax.Array, pred: jax.Array) -> jax.Array:
         return jnp.mean(jnp.square(target - pred))
 
 
 class CrossEntropyLoss(Loss):
 
-    def __init__(
-        self,
-    ) -> None:
-        """Initializes cross entropy loss."""
+    def __init__(self) -> None:
         super().__init__()
 
-    def __call__(self, target: ArrayImpl, pred: ArrayImpl) -> ArrayImpl:
-        """Computes cross entropy loss.
-
-        Args:
-            preds: Model predictions.
-            targets: Ground truth labels.
-        """
-        return -jnp.mean((pred - logsumexp(pred)) * target)
+    def __call__(self, target: jax.Array, logits: jax.Array) -> jax.Array:
+        log_probs = log_softmax(logits)
+        return -jnp.mean(jnp.sum(target * log_probs, axis=-1))
