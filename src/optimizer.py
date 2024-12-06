@@ -200,14 +200,14 @@ class RLOptimizer:
     def __init__(
         self,
         model,
-        env,
+        env_dataset,
         criterion: Criterion,
         scheduler: Scheduler,
         config: dict,
     ):
 
         self.model = model
-        self.env = env
+        self.env = env_dataset
         self.criterion = criterion
         self.scheduler = scheduler
 
@@ -243,7 +243,7 @@ class RLOptimizer:
 
         temp = self.temp_initial
         epoch = 0
-        num_episodes = 5
+        num_rollouts = 1
 
         while temp > self.temp_final:
 
@@ -254,40 +254,59 @@ class RLOptimizer:
             num_accept = 0
             num_permut = 0
 
-            for _ in range(num_episodes):
+            key = random.randint(0, 2**32)
+            reward = self.env.rollout(
+                key=key,
+                model=self.model,
+                params=self.params,
+                num_rollouts=num_rollouts,
+            )
+            ## reward = self.rollouts(
+            ##     env=self.env,
+            ##     model=self.model,
+            ##     params=self.params,
+            ##     num_rollouts=num_rollouts,
+            ##     seed=seed,
+            ## )
+            score_old = self.criterion(reward)
 
-                reward = self.rollout(
-                    env=self.env, model=self.model, params=self.params
+            self.params_new = self._copy_params(params=self.params)
+            self.params_new = self.perturb(params=self.params_new)
+
+            reward = self.env.rollout(
+                key=key,
+                model=self.model,
+                params=self.params_new,
+                num_rollouts=num_rollouts,
+            )
+            ## reward = self.rollouts(
+            ##     env=self.env,
+            ##     model=self.model,
+            ##     params=self.params_new,
+            ##     num_rollouts=num_rollouts,
+            ##     seed=seed,
+            ## )
+            score_new = self.criterion(reward)
+
+            delta_loss = score_new - score_old
+
+            if delta_loss < 0.0:
+                self.params = self._update(
+                    params=self.params,
+                    params_new=self.params_new,
+                    momentum=self.momentum,
                 )
-                score_old = self.criterion(reward)
-
-                self.params_new = self._copy_params(params=self.params)
-                self.params_new = self.perturb(params=self.params_new)
-
-                reward = self.rollout(
-                    env=self.env, model=self.model, params=self.params
+                num_accept += 1
+            elif random.random() < math.exp(-delta_loss / temp):
+                self.params = self._update(
+                    params=self.params,
+                    params_new=self.params_new,
+                    momentum=self.momentum,
                 )
-                score_new = self.criterion(reward)
+                num_permut += 1
 
-                delta_loss = score_new - score_old
-
-                if delta_loss < 0.0:
-                    self.params = self._update(
-                        params=self.params,
-                        params_new=self.params_new,
-                        momentum=self.momentum,
-                    )
-                    num_accept += 1
-                elif random.random() < math.exp(-delta_loss / temp):
-                    self.params = self._update(
-                        params=self.params,
-                        params_new=self.params_new,
-                        momentum=self.momentum,
-                    )
-                    num_permut += 1
-
-                running_reward += reward
-                running_iter += 1
+            running_reward += reward
+            running_iter += 1
 
             epoch_time = time.time() - start_time
 
@@ -301,44 +320,69 @@ class RLOptimizer:
             )
             self.writer.add_scalar("train/temperature", temp, epoch)
 
+            key = random.randint(0, 2**32)
             if (epoch + 1) % self.stats_every_n_epochs == 0:
-                self._write_stats(
-                    env=self.env, model=self.model, params=self.params, epoch=epoch
-                )
+                self._write_stats(key=key, model=self.model, params=self.params, epoch=epoch)
 
             epoch += 1
             temp = self.scheduler(temp, epoch)
 
-        self._write_stats(
-            env=self.env, model=self.model, params=self.params, epoch=epoch
-        )
+        key = random.randint(0, 2**32)
+        self._write_stats(key=key, model=self.model, params=self.params, epoch=epoch)
         self.writer.close()
 
-    def rollout(  # TODO: Make this a generator
-        self, env, model, params, num_env_steps: int = 200, seed: Optional[int] = None
-    ) -> float:
+    # def rollouts(
+    #     self,
+    #     env,
+    #     model,
+    #     params,
+    #     num_rollouts: int,
+    #     num_env_steps: int = 200,
+    #     seed: Optional[int] = None,
+    # ) -> float:
+    #     reward = 0.0
+    #     for _ in range(num_rollouts):
+    #         reward += self.rollout(
+    #             env=env,
+    #             model=model,
+    #             params=params,
+    #             num_env_steps=num_env_steps,
+    #             seed=seed,
+    #         )
+    #     return reward / num_rollouts
 
-        observation, info = env.reset(seed=seed)
+    # def rollout(  # TODO: Make this a generator
+    #     self,
+    #     env,
+    #     model,
+    #     params,
+    #     num_env_steps: int = 200,
+    #     seed: Optional[int] = None,
+    # ) -> float:
 
-        total_reward = 0.0
-        step = 0
+    #     observation, info = env.reset(seed=seed)
 
-        while step < num_env_steps:
-            observation = jnp.atleast_2d(observation)
-            action = int(jnp.argmax(model(params, observation), axis=-1)[0])
-            observation, reward, terminated, truncated, info = env.step(action)
-            if terminated or truncated:
-                observation, info = env.reset(seed=seed)
-            total_reward += reward
-            step += 1
+    #     total_reward = 0.0
+    #     step = 0
+    #     is_not_done = True
 
-        return total_reward
+    #     while step < num_env_steps and is_not_done:
+    #         observation = jnp.atleast_2d(observation)
+    #         action = int(jnp.argmax(model(params, observation), axis=-1)[0])
+    #         observation, reward, terminated, truncated, info = env.step(action)
+    #         total_reward += reward
+    #         step += 1
+    #         if terminated or truncated:
+    #             is_not_done = False
+    #             # observation, info = env.reset(seed=seed)
 
-    def _write_stats(self, env, model, params, epoch: int) -> None:
+    #     return total_reward
+
+    def _write_stats(self, key, model, params, epoch: int) -> None:
         num_env_episodes = 20
         total_reward = 0
         for _ in range(num_env_episodes):
-            reward = self.rollout(env=env, model=model, params=params)
+            reward = self.env.rollout(key=key, model=model, params=params)
             total_reward += reward
         mean_reward = total_reward / num_env_episodes
         self.writer.add_scalar("test/mean_reward", mean_reward, epoch)
