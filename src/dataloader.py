@@ -138,7 +138,6 @@ class RLDataset:
 
     def __init__(self, env: gym.Env, max_len_rollout: int = 400):
         self.env = env
-        print(f"{self.env.action_space = }")
         self.max_len_rollout = max_len_rollout
         if isinstance(env.action_space, gym.spaces.Discrete):
             self.is_discrete = True

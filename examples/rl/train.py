@@ -32,7 +32,7 @@ def train():
         "gamma": 0.0001,
         "train_stats_every_n_iter": 10,
         "test_stats_every_n_iter": 200,
-        "output_dir": "output/ll",
+        "output_dir": "output",
     }
 
     env = gym.make(id=config["env_name"])

@@ -63,7 +63,7 @@ def argument_parser() -> None:
     parser.add_argument(
         "--ckpt_dir",
         type=str,
-        default="./output/ll/ckpt.pkl",
+        default="./output/ckpt.pkl",
         help="Directory of model checkpoint.",
     )
     parser.add_argument(
