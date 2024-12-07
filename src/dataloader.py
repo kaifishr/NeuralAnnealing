@@ -1,11 +1,15 @@
 import pathlib
+
+import gymnasium as gym
 import numpy
 import torch
 import jax.numpy as jnp
-
+import jax
 from torch.utils.data import DataLoader
 from torchvision.datasets import FashionMNIST, MNIST
 from torchvision import transforms
+
+from .custom_types import Params
 
 
 def numpy_collate(batch):
@@ -18,19 +22,19 @@ def numpy_collate(batch):
         return numpy.array(batch)
 
 
-class FlattenCast(object):
+class FlattenCast:
+
     def __call__(self, data: torch.Tensor) -> numpy.ndarray:
         data = numpy.ravel(numpy.array(data, dtype=jnp.float32))
         return data
 
 
-class DataServer:
+class DataStore:
 
     def __init__(self, config: dict) -> None:
 
         self.dataset = config["dataset"]
         self.batch_size = config["batch_size"]
-        self.num_targets = config["num_targets"]
         self.num_workers = config["num_workers"]
 
         home_dir = pathlib.Path.home()
@@ -128,3 +132,48 @@ class DataServer:
             drop_last=False,
         )
         return test_dataloader
+
+
+class RLDataset:
+
+    def __init__(self, env: gym.Env, max_len_rollout: int = 400):
+        self.env = env
+        print(f"{self.env.action_space = }")
+        self.max_len_rollout = max_len_rollout
+        if isinstance(env.action_space, gym.spaces.Discrete):
+            self.is_discrete = True
+        elif isinstance(env.action_space, gym.spaces.Box):
+            self.is_discrete = False
+        else:
+            raise NotImplementedError(
+                f"Action space '{env.action_space}' not supported."
+            )
+
+    def __del__(self):
+        self.env.close()
+
+    def _rollout(self, seed: int, model, params: Params) -> float:
+        observation, info = self.env.reset(seed=seed)
+        total_reward = 0
+        for _ in range(self.max_len_rollout):
+            observation = jnp.atleast_2d(observation)
+            action = model(params, observation)
+            if self.is_discrete:
+                action = int(jnp.argmax(action, axis=-1)[0])
+            else:
+                action = numpy.array(jax.nn.tanh(action)[0])
+            observation, reward, terminated, truncated, info = self.env.step(action)
+            total_reward += reward
+            if terminated or truncated:
+                break
+        return total_reward
+
+    def rollout(
+        self, key: jax.Array, model, params: Params, num_rollouts: int = 1
+    ) -> float:
+        total_rewards = 0.0
+        for _ in range(num_rollouts):
+            key, subkey = jax.random.split(key=key)
+            seed = int(subkey[0])
+            total_rewards += self._rollout(seed=seed, model=model, params=params)
+        return total_rewards / num_rollouts

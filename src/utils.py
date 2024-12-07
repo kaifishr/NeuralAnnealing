@@ -32,15 +32,12 @@ def comp_loss_accuracy(
 
         preds = model(params, images)
 
-        # Compute accuracy
         target_class = jnp.argmax(targets, axis=1)
         predicted_class = jnp.argmax(preds, axis=1)
         batch_accuracy = float(jnp.sum(target_class == predicted_class))
 
-        # Compute loss
         batch_loss = loss(targets, preds)
 
-        # Accumulating stats
         running_loss += batch_loss
         running_accuracy += batch_accuracy
         running_counter += len(images)

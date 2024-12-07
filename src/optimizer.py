@@ -1,21 +1,23 @@
+import pathlib
+import pickle
 import math
 import random
 import time
 
-from jax.nn import log_softmax
+from functools import partial
+
+import numpy
 import jax
 import jax.numpy as jnp
-from torch.utils.tensorboard import SummaryWriter
-from typing import List, Optional
+from typing import List, Optional, Any
 
-from .dataloader import DataServer
+from .dataloader import DataStore
 from .loss import Criterion
 from .scheduler import Scheduler
 from .utils import comp_loss_accuracy, one_hot
 from .model import init_params
-
-
-Params = list[tuple[jax.Array, jax.Array]]
+from .custom_types import Params
+from .logger import TensorboardLogger
 
 
 class Optimizer:
@@ -25,41 +27,40 @@ class Optimizer:
         model,
         criterion: Criterion,
         scheduler: Scheduler,
-        data: DataServer,
-        config: dict,
+        dataset,
+        config: dict[str, Any],
     ):
-
         self.model = model
-        self.loss = criterion
+        self.criterion = criterion
         self.scheduler = scheduler
-        self.data = data
+        self.dataset = dataset
+        self.config = config
 
+        self.key = jax.random.PRNGKey(seed=config["seed"])
+        layer_dims = (
+            [config["dim_input"]] + config["dim_hidden"] + [config["dim_output"]]
+        )
+        self.params = init_params(key=self.key, dims=layer_dims)
+        self.params_new = self._copy_params(params=self.params)
+
+        # Parameters for simulated annealing.
         self.gamma = config["gamma"]
         self.momentum = config["momentum"]
-        self.temp_initial = config["temp_initial"]
+        self.temp_start = config["temp_start"]
         self.temp_final = config["temp_final"]
         self.perturbation_prob = config["perturbation_prob"]
         self.perturbation_size = config["perturbation_size"]
-        self.stats_every_n_epochs = config["stats_every_n_epochs"]
-        self.num_targets = config["num_targets"]
 
-        self.training_generator = data.get_training_dataloader()
-        self.test_generator = data.get_test_dataloader()
+        self.test_stats_every_n_iter = config["test_stats_every_n_iter"]
+        self.train_stats_every_n_iter = config["train_stats_every_n_iter"]
 
-        self.key = jax.random.PRNGKey(seed=config["seed"])
-        self.key, subkey = jax.random.split(self.key)
+        self.output_dir = pathlib.Path(config["output_dir"])
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        self.params = init_params(config["layer_sizes"], key=subkey)
-        self.params_new = self._copy_params(params=self.params)
-
-        self.writer = SummaryWriter()
+        self.logger = TensorboardLogger()
 
     @staticmethod
-    def _loss(target, logits):
-        log_probs = log_softmax(logits)
-        return -jnp.mean(jnp.sum(target * log_probs, axis=-1))
-
-    @staticmethod
+    @jax.jit
     def _update(
         params: Params, params_new: Params, momentum: Optional[float] = None
     ) -> list[tuple[jax.Array]]:
@@ -71,10 +72,75 @@ class Optimizer:
             ]
         return params_new
 
+    @partial(jax.jit, static_argnames=["self"])
+    def _perturb(
+        self,
+        key: jax.Array,
+        params: List[jax.Array],
+        perturbation_prob: float,
+        perturbation_size: float,
+    ) -> List[jax.Array]:
+        return [
+            (
+                self._perturb_params(key, w, perturbation_prob, perturbation_size),
+                self._perturb_params(key, b, perturbation_prob, perturbation_size),
+            )
+            for w, b in params
+        ]
+
+    @staticmethod
+    @jax.jit
+    def _perturb_params(
+        key: jax.Array, x: jax.Array, prob: float, size: float
+    ) -> jax.Array:
+        key, subkey1, subkey2 = jax.random.split(key, num=3)
+        mask = jax.random.uniform(key=subkey1, shape=x.shape) < prob
+        perturbation = jax.random.uniform(
+            key=subkey2, shape=x.shape, minval=-size, maxval=size
+        )
+        x = x + mask * perturbation
+        return x
+
+    @staticmethod
+    @jax.jit
+    def _copy_params(params: list[tuple[jax.Array, jax.Array]]):
+        return [(jnp.array(w), jnp.array(b)) for w, b in params]
+
+    def run(
+        self,
+    ):
+        raise NotImplementedError()
+
+    def _save_params(self) -> None:
+        with open(self.output_dir / "ckpt.pkl", "wb") as fp:
+            pickle.dump(self.params, fp)
+
+
+class DLOptimizer(Optimizer):
+
+    def __init__(
+        self,
+        model,
+        dataset: DataStore,
+        criterion: Criterion,
+        scheduler: Scheduler,
+        config: dict,
+    ):
+        super().__init__(
+            model=model,
+            criterion=criterion,
+            scheduler=scheduler,
+            dataset=dataset,
+            config=config,
+        )
+        self.training_generator = dataset.get_training_dataloader()
+        self.test_generator = dataset.get_test_dataloader()
+        self.dim_outputs = config["dim_output"]
+
     def run(self):
 
-        temp = self.temp_initial
-        epoch = 0
+        temp = self.temp_start
+        iteration = 0
 
         while temp > self.temp_final:
 
@@ -88,22 +154,24 @@ class Optimizer:
             num_permut = 0
 
             for x, y in self.training_generator:
-                target = one_hot(y, self.num_targets)
+                target = one_hot(y, self.dim_outputs)
 
                 logits = self.model(self.params, x)
-                ## loss_old = self.loss(target=target, logits=logits)
-                loss_old = self._loss(target=target, logits=logits)
+                loss_old = self.criterion(target=target, logits=logits)
 
                 self.params_new = self._copy_params(params=self.params)
-                self.params_new = self.perturb(params=self.params_new)
+                self.params_new = self._perturb(
+                    key=self.key,
+                    params=self.params_new,
+                    perturbation_prob=self.perturbation_prob,
+                    perturbation_size=self.perturbation_size,
+                )
                 logits = self.model(self.params_new, x)
-                ## loss_new = self.loss(target=target, logits=logits)
-                loss_new = self._loss(target=target, logits=logits)
+                loss_new = self.criterion(target=target, logits=logits)
 
                 delta_loss = loss_new - loss_old
 
                 if delta_loss < 0.0:
-                    ## self.params = self.params_new
                     self.params = self._update(
                         params=self.params,
                         params_new=self.params_new,
@@ -111,7 +179,6 @@ class Optimizer:
                     )
                     num_accept += 1
                 elif random.random() < math.exp(-delta_loss / temp):
-                    # self.params = self.params_new
                     self.params = self._update(
                         params=self.params,
                         params_new=self.params_new,
@@ -126,166 +193,103 @@ class Optimizer:
                 running_counter += len(x)
                 running_iter += 1
 
-            epoch_time = time.time() - start_time
+            iteration_time = time.time() - start_time
 
-            self.writer.add_scalar(
-                "train/running_loss", running_loss / running_counter, epoch
-            )
-            self.writer.add_scalar(
-                "train/running_accuracy", running_accuracy / running_counter, epoch
-            )
-            self.writer.add_scalar("train/time_per_epoch", epoch_time, epoch)
-            self.writer.add_scalar(
-                "train/prop_accept", num_accept / running_iter, epoch
-            )
-            self.writer.add_scalar(
-                "train/prop_permut", num_permut / running_iter, epoch
-            )
-            self.writer.add_scalar("train/temperature", temp, epoch)
+            if (iteration + 1) % self.train_stats_every_n_iter == 0:
+                stats = {
+                    "train/running_loss": running_loss / running_counter,
+                    "train/running_accuracy": running_accuracy / running_counter,
+                    "train/time_per_iteration": iteration_time,
+                    "train/prob_accept": num_accept / running_iter,
+                    "train/prob_permut": num_permut / running_iter,
+                    "train/temperature": temp,
+                }
+                self.logger.write(stats=stats, iteration=iteration)
 
-            if (epoch + 1) % self.stats_every_n_epochs == 0:
-                self._write_stats(epoch, epoch_time)
+            if (iteration + 1) % self.test_stats_every_n_iter == 0:
+                self._save_params()
+                self._write_full_eval(iteration=iteration)
 
-            epoch += 1
-            temp = self.scheduler(temp, epoch)
+            iteration += 1
+            temp = self.scheduler(temp, iteration)
 
-        self._write_stats(epoch, epoch_time)
-        self.writer.close()
+        self._save_params()
+        self._write_full_eval(iteration=iteration)
 
-    def _write_stats(self, epoch: int, epoch_time: float) -> None:
+    def _write_full_eval(self, iteration: int) -> None:
         train_loss, train_accuracy = comp_loss_accuracy(
             self.model,
             self.params_new,
-            self.loss,
+            self.criterion,
             self.training_generator,
         )
         test_loss, test_accuracy = comp_loss_accuracy(
             self.model,
             self.params_new,
-            self.loss,
+            self.criterion,
             self.test_generator,
         )
-        self.writer.add_scalar("train/loss", train_loss, epoch)
-        self.writer.add_scalar("train/accuracy", train_accuracy, epoch)
-        self.writer.add_scalar("test/loss", test_loss, epoch)
-        self.writer.add_scalar("test/accuracy", test_accuracy, epoch)
-        log = f"{epoch} {epoch_time:.2f} {train_loss:.4f} {train_accuracy:.4f} {test_loss:.4f} {test_accuracy:.4f}"
-        print(log)
-
-    def perturb(self, params: List[jax.Array]) -> List[jax.Array]:
-        params = [(self._perturb_params(w), self._perturb_params(b)) for w, b in params]
-        return params
-
-    def _perturb_params(self, x: jax.Array) -> jax.Array:
-        self.key, subkey1, subkey2 = jax.random.split(self.key, num=3)
-        # mask = 1.0 * (jax.random.uniform(key=subkey1, shape=x.shape) < self.perturbation_prob)
-        mask = jax.random.uniform(key=subkey1, shape=x.shape) < self.perturbation_prob
-        perturbation = jax.random.uniform(
-            key=subkey2,
-            shape=x.shape,
-            minval=-self.perturbation_size,
-            maxval=self.perturbation_size,
-        )
-        x = x + mask * perturbation
-        # return jnp.clip(x, a_min=-10.0, a_max=10.0)
-        return x
-
-    @staticmethod
-    def _copy_params(params: list[tuple[jax.Array]]):
-        return [(jnp.array(w), jnp.array(b)) for w, b in params]
+        stats = {
+            "train/loss": train_loss,
+            "train/accuracy": train_accuracy,
+            "test/loss": test_loss,
+            "test/accuracy": test_accuracy,
+        }
+        self.logger.write(stats=stats, iteration=iteration)
 
 
-class RLOptimizer:
+class RLOptimizer(Optimizer):
 
     def __init__(
         self,
         model,
-        env_dataset,
+        rl_dataset,
         criterion: Criterion,
         scheduler: Scheduler,
         config: dict,
     ):
-
-        self.model = model
-        self.env = env_dataset
-        self.criterion = criterion
-        self.scheduler = scheduler
-
-        self.gamma = config["gamma"]
-        self.momentum = config["momentum"]
-        self.temp_initial = config["temp_initial"]
-        self.temp_final = config["temp_final"]
-        self.perturbation_prob = config["perturbation_prob"]
-        self.perturbation_size = config["perturbation_size"]
-        self.stats_every_n_epochs = config["stats_every_n_epochs"]
-
-        self.key = jax.random.PRNGKey(seed=config["seed"])
-        self.key, subkey = jax.random.split(self.key)
-
-        self.params = init_params(config["layer_sizes"], key=subkey)
-        self.params_new = self._copy_params(params=self.params)
-
-        self.writer = SummaryWriter()
-
-    @staticmethod
-    def _update(
-        params: Params, params_new: Params, momentum: Optional[float] = None
-    ) -> list[tuple[jax.Array]]:
-        if momentum is not None:
-            eta = momentum
-            return [
-                (eta * w + (1.0 - eta) * w_new, eta * b + (1.0 - eta) * b_new)
-                for (w, b), (w_new, b_new) in zip(params, params_new)
-            ]
-        return params_new
+        super().__init__(
+            model=model,
+            criterion=criterion,
+            scheduler=scheduler,
+            dataset=rl_dataset,
+            config=config,
+        )
+        self.num_rollouts = config["num_rollouts"]
 
     def run(self):
 
-        temp = self.temp_initial
-        epoch = 0
-        num_rollouts = 1
+        temp = self.temp_start
+        iteration = 0
 
         while temp > self.temp_final:
-
             start_time = time.time()
-
             running_iter = 0
             running_reward = 0.0
-            num_accept = 0
-            num_permut = 0
 
-            key = random.randint(0, 2**32)
-            reward = self.env.rollout(
-                key=key,
+            self.key, subkey = jax.random.split(key=self.key)
+            reward = self.dataset.rollout(
+                key=subkey,
                 model=self.model,
                 params=self.params,
-                num_rollouts=num_rollouts,
+                num_rollouts=self.num_rollouts,
             )
-            ## reward = self.rollouts(
-            ##     env=self.env,
-            ##     model=self.model,
-            ##     params=self.params,
-            ##     num_rollouts=num_rollouts,
-            ##     seed=seed,
-            ## )
             score_old = self.criterion(reward)
 
             self.params_new = self._copy_params(params=self.params)
-            self.params_new = self.perturb(params=self.params_new)
+            self.params_new = self._perturb(
+                key=self.key,
+                params=self.params_new,
+                perturbation_prob=self.perturbation_prob,
+                perturbation_size=self.perturbation_size,
+            )
 
-            reward = self.env.rollout(
-                key=key,
+            reward = self.dataset.rollout(
+                key=subkey,
                 model=self.model,
                 params=self.params_new,
-                num_rollouts=num_rollouts,
+                num_rollouts=self.num_rollouts,
             )
-            ## reward = self.rollouts(
-            ##     env=self.env,
-            ##     model=self.model,
-            ##     params=self.params_new,
-            ##     num_rollouts=num_rollouts,
-            ##     seed=seed,
-            ## )
             score_new = self.criterion(reward)
 
             delta_loss = score_new - score_old
@@ -296,116 +300,64 @@ class RLOptimizer:
                     params_new=self.params_new,
                     momentum=self.momentum,
                 )
-                num_accept += 1
             elif random.random() < math.exp(-delta_loss / temp):
                 self.params = self._update(
                     params=self.params,
                     params_new=self.params_new,
                     momentum=self.momentum,
                 )
-                num_permut += 1
 
             running_reward += reward
             running_iter += 1
 
-            epoch_time = time.time() - start_time
+            iteration_time = time.time() - start_time
 
-            self.writer.add_scalar("train/time_per_epoch", epoch_time, epoch)
-            self.writer.add_scalar("train/running_reward", running_reward, epoch)
-            self.writer.add_scalar(
-                "train/prop_accept", num_accept / running_iter, epoch
-            )
-            self.writer.add_scalar(
-                "train/prop_permut", num_permut / running_iter, epoch
-            )
-            self.writer.add_scalar("train/temperature", temp, epoch)
+            if (iteration + 1) % self.train_stats_every_n_iter == 0:
+                stats = {
+                    "train/rollouts_per_second": self.num_rollouts / iteration_time,
+                    "train/running_reward": running_reward,
+                    "train/time_per_iteration": iteration_time,
+                    "train/temperature": temp,
+                }
+                self.logger.write(stats=stats, iteration=iteration)
 
-            key = random.randint(0, 2**32)
-            if (epoch + 1) % self.stats_every_n_epochs == 0:
-                self._write_stats(key=key, model=self.model, params=self.params, epoch=epoch)
+            if (iteration + 1) % self.test_stats_every_n_iter == 0:
+                self.key, subkey = jax.random.split(key=self.key)
+                self._write_full_eval(
+                    key=subkey,
+                    model=self.model,
+                    params=self.params,
+                    iteration=iteration,
+                )
+                self._save_params()
 
-            epoch += 1
-            temp = self.scheduler(temp, epoch)
+            iteration += 1
+            temp = self.scheduler(temp, iteration)
 
-        key = random.randint(0, 2**32)
-        self._write_stats(key=key, model=self.model, params=self.params, epoch=epoch)
+        self.key, subkey = jax.random.split(key=self.key)
+        self._write_full_eval(
+            key=subkey,
+            model=self.model,
+            params=self.params,
+            iteration=iteration,
+        )
+        self._save_params()
         self.writer.close()
 
-    # def rollouts(
-    #     self,
-    #     env,
-    #     model,
-    #     params,
-    #     num_rollouts: int,
-    #     num_env_steps: int = 200,
-    #     seed: Optional[int] = None,
-    # ) -> float:
-    #     reward = 0.0
-    #     for _ in range(num_rollouts):
-    #         reward += self.rollout(
-    #             env=env,
-    #             model=model,
-    #             params=params,
-    #             num_env_steps=num_env_steps,
-    #             seed=seed,
-    #         )
-    #     return reward / num_rollouts
-
-    # def rollout(  # TODO: Make this a generator
-    #     self,
-    #     env,
-    #     model,
-    #     params,
-    #     num_env_steps: int = 200,
-    #     seed: Optional[int] = None,
-    # ) -> float:
-
-    #     observation, info = env.reset(seed=seed)
-
-    #     total_reward = 0.0
-    #     step = 0
-    #     is_not_done = True
-
-    #     while step < num_env_steps and is_not_done:
-    #         observation = jnp.atleast_2d(observation)
-    #         action = int(jnp.argmax(model(params, observation), axis=-1)[0])
-    #         observation, reward, terminated, truncated, info = env.step(action)
-    #         total_reward += reward
-    #         step += 1
-    #         if terminated or truncated:
-    #             is_not_done = False
-    #             # observation, info = env.reset(seed=seed)
-
-    #     return total_reward
-
-    def _write_stats(self, key, model, params, epoch: int) -> None:
-        num_env_episodes = 20
-        total_reward = 0
-        for _ in range(num_env_episodes):
-            reward = self.env.rollout(key=key, model=model, params=params)
-            total_reward += reward
-        mean_reward = total_reward / num_env_episodes
-        self.writer.add_scalar("test/mean_reward", mean_reward, epoch)
-        print(f"{epoch = } {mean_reward = }")
-
-    def perturb(self, params: List[jax.Array]) -> List[jax.Array]:
-        params = [(self._perturb_params(w), self._perturb_params(b)) for w, b in params]
-        return params
-
-    def _perturb_params(self, x: jax.Array) -> jax.Array:
-        self.key, subkey1, subkey2 = jax.random.split(self.key, num=3)
-        # mask = 1.0 * (jax.random.uniform(key=subkey1, shape=x.shape) < self.perturbation_prob)
-        mask = jax.random.uniform(key=subkey1, shape=x.shape) < self.perturbation_prob
-        perturbation = jax.random.uniform(
-            key=subkey2,
-            shape=x.shape,
-            minval=-self.perturbation_size,
-            maxval=self.perturbation_size,
-        )
-        x = x + mask * perturbation
-        # return jnp.clip(x, a_min=-10.0, a_max=10.0)
-        return x
-
-    @staticmethod
-    def _copy_params(params: list[tuple[jax.Array]]):
-        return [(jnp.array(w), jnp.array(b)) for w, b in params]
+    def _write_full_eval(
+        self, key: jax.Array, model, params: Params, iteration: int
+    ) -> None:
+        num_test_episodes = 20
+        rewards = []
+        for _ in range(num_test_episodes):
+            key, subkey = jax.random.split(key=key)
+            reward = self.dataset.rollout(key=subkey, model=model, params=params)
+            rewards.append(float(reward))
+        reward_mean = float(numpy.array(rewards).mean())
+        reward_std = float(numpy.array(rewards).std())
+        stats = {
+            "test/avg_reward": reward_mean,
+            "test/std_reward": reward_std,
+        }
+        self.logger.write(stats=stats, iteration=iteration)
+        print(f"{iteration = } {reward_mean = } {reward_std = }")

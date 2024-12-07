@@ -142,6 +142,7 @@ dmypy.json
 # Built Visual Studio Code Extensions
 *.vsix
 
-# Lab
+# Project
 **/runs/**
 *.txt
+output/

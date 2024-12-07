@@ -2,22 +2,27 @@
 
 Train neural networks with simulated annealing (SA) and JAX. As SA does not rely on gradients, rather unusual features such as step activation functions can be used for training.
 
-## Linux Installation
+## Installation
 
 ```
 conda env create --file environment.yml
 conda activate neural_annealing
-python -m examples.classification
 ```
 
-\\ ```
-\\ conda create --name neural_annealing
-\\ conda activate neural_annealing
-\\ conda install pip
-\\ pip install --upgrade pip
-\\ pip install --upgrade "jax[cuda12]"
-\\ pip install torch torchvision, tensorboard
-\\ ```
+## Run the Examples
+
+### Reinforcemnt Learning
+
+```
+python -m examples.rl.train
+python -m examples.rl.eval
+```
+
+### Image Classification
+
+```
+python -m examples.ml.train
+```
 
 ## Simulated Annealing
 
@@ -55,15 +60,6 @@ $$p = p_0 \cdot \frac{T}{T_0}$$
 
 with $p_0$ and $T_0$ representing the initial perturbation probability and initial temperature, respectively.
 
-## Experiments
-
-The following experiments tested simulated annealing for fully connected neural networks with discrete trainable parameters and used an inhomogeneous annealing schedule. The networks consisted of 3 hidden layers with 2048 neurons each. Networks were initialized randomly and identically when compared to different sets of optimization  parameters. The network was trained with a batch size of 512. A good temperature found empirically was found to be $T_0 = 0.005$. The temperature schedule followed an exponential decay with $\gamma = 0.02$. The optimization stopped at a temperature of $1e-6$. 
-
-<p align="center">
-<img src="docs/loss_accuracy.png" alt="isolated" width="420"/>
-</p>
-
-
 ## Discussion
 
 Apart from the fact that one should probably not optimize neural networks with simulated annealing, it is fun to play around with JAX and neural wetworks with discrete weights. Despite the high dimensionality of the used neural network, an accuracy of over 80% was achieved.
@@ -71,11 +67,6 @@ Apart from the fact that one should probably not optimize neural networks with s
 Getting the hyperparameters right for simulated annealing is a bit cumbersome. It required quite a bit of trial and error to get the initial temperature as well as the annealing schedule right.
 
 Another difficulty regarding the neural networks is the correct normalization of the network's predictions in case of discrete network parameters and step activation functions. It turns out that this is a crucial step before common loss functions can be meaningfully applied.
-
-## TODOs
-
-- Save best model during training.
-
 
 ## Citation
 

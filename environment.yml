@@ -6,12 +6,12 @@ dependencies:
   - python=3.10
   - pip
   - libstdcxx-ng  # For box2d env
+  - tensorboardx
   - pip:
     - --upgrade pip
     - --upgrade "jax[cuda12]"
     - torch
     - torchvision
-    - tensorboard
     - black
     - swig
     - gymnasium[box2d]

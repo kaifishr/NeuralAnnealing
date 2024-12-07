@@ -27,10 +27,10 @@ class PowerScheduler(Scheduler):
 class ExponentialScheduler(Scheduler):
     """Decays temperature exponentially."""
 
-    def __init__(self, gamma: float, temp_initial: float, temp_final: float) -> None:
+    def __init__(self, gamma: float, temp_start: float, temp_final: float) -> None:
         super().__init__()
         self.gamma = gamma
-        self.temp_initial = temp_initial
+        self.temp_start = temp_start
         self.temp_final = temp_final
         self.total_iterations = None
 
@@ -38,15 +38,13 @@ class ExponentialScheduler(Scheduler):
 
     def _print_info(self) -> None:
         self.total_iterations = int(
-            math.ceil(
-                (1.0 / self.gamma) * math.log(self.temp_initial / self.temp_final)
-            )
+            math.ceil((1.0 / self.gamma) * math.log(self.temp_start / self.temp_final))
             + 1
         )
         print(f"Required iterations: {self.total_iterations}")
 
     def __call__(self, temp: float, iteration: int) -> None:
-        temp = self.temp_initial * math.exp(-self.gamma * iteration)
+        temp = self.temp_start * math.exp(-self.gamma * iteration)
         return temp
 
 

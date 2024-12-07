@@ -4,11 +4,11 @@ import jax.numpy as jnp
 from jaxlib.xla_extension import ArrayImpl
 
 
-def init_params(sizes: list, key: ArrayImpl):
-    keys = jax.random.split(key, len(sizes))
+def init_params(key: ArrayImpl, dims: list[int]) -> list[tuple[jax.Array]]:
+    keys = jax.random.split(key=key, num=len(dims))
     return [
         _init_params(fan_in=fan_in, fan_out=fan_out, key=key)
-        for fan_in, fan_out, key in zip(sizes[:-1], sizes[1:], keys)
+        for fan_in, fan_out, key in zip(dims[:-1], dims[1:], keys)
     ]
 
 
@@ -20,15 +20,16 @@ def _init_params(fan_in: int, fan_out: int, key: ArrayImpl):
     return w, b
 
 
-def predict(params: ArrayImpl, data: ArrayImpl):
+def predict(params: ArrayImpl, inputs: ArrayImpl):
     """Single-sample forward method."""
-    out = data
+    out = inputs
     out = jax.lax.stop_gradient(out)
 
     *layers, last = params
 
     for w, b in layers:
         out = jnp.dot(w, out) + b
+        # out = jax.nn.tanh(out)
         out = jax.nn.relu(out)
         # out = jnp.heaviside(out, 0.0)
         # out = jnp.sign(out)
