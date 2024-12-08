@@ -1,6 +1,7 @@
 import os
 import jax
 
+from src.utils import set_random_seed
 from src.dataloader import DataStore
 from src.loss import CrossEntropyLoss
 from src.model import mlp
@@ -13,7 +14,7 @@ os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.1"
 def train():
 
     config = {
-        "seed": 5432,
+        "seed": 1234,
         "device": "gpu",
         "dataset": "fashion_mnist",  # mnist, fashion_mnist
         "dim_input": 28**2,
@@ -31,6 +32,8 @@ def train():
         "test_stats_every_n_iter": 20,
         "output_dir": "output/ml",
     }
+
+    set_random_seed(seed=config["seed"])
 
     if config["device"] == "cpu":
         jax.config.update("jax_platform_name", "cpu")

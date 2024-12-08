@@ -1,9 +1,19 @@
+import random
+
+import torch
 import numpy
 import jax
 import jax.numpy as jnp
 
-from typing import Callable
+from typing import Callable, Optional
 from torch.utils.data import DataLoader
+
+
+def set_random_seed(seed: Optional[int] = None):
+    if seed:
+        random.seed(seed)
+        numpy.random.seed(seed)
+        torch.manual_seed(seed)
 
 
 def one_hot(x: numpy.ndarray, k: int, dtype=jnp.float32):

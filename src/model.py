@@ -22,15 +22,14 @@ def _init_params(fan_in: int, fan_out: int, key: ArrayImpl):
 
 def predict(params: ArrayImpl, inputs: ArrayImpl):
     """Single-sample forward method."""
-    out = inputs
-    out = jax.lax.stop_gradient(out)
+    out = jax.lax.stop_gradient(inputs)
 
     *layers, last = params
 
     for w, b in layers:
         out = jnp.dot(w, out) + b
-        # out = jax.nn.tanh(out)
-        out = jax.nn.relu(out)
+        out = jax.nn.tanh(out)
+        # out = jax.nn.relu(out)
         # out = jnp.heaviside(out, 0.0)
         # out = jnp.sign(out)
 
