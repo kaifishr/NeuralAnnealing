@@ -4,7 +4,7 @@ import jax
 from src.utils import set_random_seed
 from src.dataloader import DataStore
 from src.loss import CrossEntropyLoss
-from src.model import mlp
+from src.model import model
 from src.optimizer import DLOptimizer
 from src.scheduler import ExponentialScheduler
 
@@ -48,7 +48,7 @@ def train():
     )
 
     optimizer = DLOptimizer(
-        model=mlp,
+        model=model,
         criterion=criterion,
         scheduler=scheduler,
         dataset=dataset,

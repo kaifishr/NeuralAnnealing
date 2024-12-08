@@ -104,7 +104,7 @@ class Optimizer:
     @jax.jit
     def _copy_params(params: list[tuple[jax.Array, jax.Array]]):
         return [(jnp.array(w), jnp.array(b)) for w, b in params]
- 
+
     def _save_params(self) -> None:
         with open(self.output_dir / "ckpt.pkl", "wb") as fp:
             pickle.dump(self.params, fp)
@@ -112,9 +112,7 @@ class Optimizer:
     def _step(self):
         raise NotImplementedError()
 
-    def run(
-        self
-    ):
+    def run(self):
         raise NotImplementedError()
 
 
@@ -177,7 +175,7 @@ class DLOptimizer(Optimizer):
         iteration = 0
 
         while temp > self.temp_final:
-            
+
             running_loss = 0.0
             running_accuracy = 0.0
             running_counter = 0
@@ -254,7 +252,7 @@ class RLOptimizer(Optimizer):
             config=config,
         )
         self.num_rollouts = config["num_rollouts"]
- 
+
     def _step(self, temp: float) -> tuple[float, float]:
         self.key, subkey = jax.random.split(key=self.key)
         reward = self.dataset.rollout(

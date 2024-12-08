@@ -1,10 +1,10 @@
 import jax
 import jax.numpy as jnp
 
-from jaxlib.xla_extension import ArrayImpl
+from .custom_types import Params
 
 
-def init_params(key: ArrayImpl, dims: list[int]) -> list[tuple[jax.Array]]:
+def init_params(key: jax.Array, dims: list[int]) -> Params:
     keys = jax.random.split(key=key, num=len(dims))
     return [
         _init_params(fan_in=fan_in, fan_out=fan_out, key=key)
@@ -12,7 +12,7 @@ def init_params(key: ArrayImpl, dims: list[int]) -> list[tuple[jax.Array]]:
     ]
 
 
-def _init_params(fan_in: int, fan_out: int, key: ArrayImpl):
+def _init_params(fan_in: int, fan_out: int, key: jax.Array) -> tuple[jax.Array, jax.Array]:
     w_key, _ = jax.random.split(key)
     scale = jnp.sqrt(2.0 / fan_in)
     w = scale * jax.random.normal(w_key, (fan_out, fan_in))
@@ -20,10 +20,8 @@ def _init_params(fan_in: int, fan_out: int, key: ArrayImpl):
     return w, b
 
 
-def predict(params: ArrayImpl, inputs: ArrayImpl):
-    """Single-sample forward method."""
+def forward(params: jax.Array, inputs: jax.Array) -> jax.Array:
     out = jax.lax.stop_gradient(inputs)
-
     *layers, last = params
 
     for w, b in layers:
@@ -35,8 +33,7 @@ def predict(params: ArrayImpl, inputs: ArrayImpl):
 
     w, b = last
     logits = jnp.dot(w, out) + b
-
     return logits
 
 
-mlp = jax.jit(jax.vmap(predict, in_axes=(None, 0)))
+model = jax.jit(jax.vmap(forward, in_axes=(None, 0)))
