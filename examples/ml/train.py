@@ -20,7 +20,7 @@ def train():
         "dim_input": 28**2,
         "dim_output": 10,
         "dim_hidden": [128, 128],
-        "batch_size": 200,  # 500
+        "batch_size": 500,
         "num_workers": 2,
         "temp_start": 0.002,
         "temp_final": 1e-9,
@@ -36,9 +36,10 @@ def train():
     set_random_seed(seed=config["seed"])
 
     if config["device"] == "cpu":
-        jax.config.update("jax_platform_name", "cpu")
+        jax.config.update(name="jax_platform_name", val="cpu")
 
     dataset = DataStore(config=config)
+
     criterion = CrossEntropyLoss()
 
     scheduler = ExponentialScheduler(
@@ -54,7 +55,7 @@ def train():
         dataset=dataset,
         config=config,
     )
-
+    
     optimizer.run()
 
 
