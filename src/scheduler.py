@@ -9,7 +9,7 @@ class Scheduler:
     ) -> None:
         """Initializes abstract scheduler class."""
 
-    def __call__(self, temp: float, iteration: int) -> None:
+    def __call__(self, temp: float, iteration: int) -> float:
         raise NotImplementedError
 
 
@@ -20,7 +20,7 @@ class PowerScheduler(Scheduler):
         super().__init__()
         self.gamma = gamma
 
-    def __call__(self, temp: float, iteration: int) -> None:
+    def __call__(self, temp: float, iteration: int) -> float:
         return temp * self.gamma**iteration
 
 
@@ -43,7 +43,7 @@ class ExponentialScheduler(Scheduler):
         )
         print(f"Required iterations: {self.total_iterations}")
 
-    def __call__(self, temp: float, iteration: int) -> None:
+    def __call__(self, temp: float, iteration: int) -> float:
         temp = self.temp_start * math.exp(-self.gamma * iteration)
         return temp
 
@@ -58,19 +58,6 @@ class LinearScheduler(Scheduler):
 
     def __call__(self, temp: float, iteration: int) -> None:
         return self.temp_initial - iteration * (self.temp_initial / self.iterations_max)
-
-
-class LinearSchedulerv2(Scheduler):
-    """Linear temperature decays."""
-
-    def __init__(self, gamma: float, min_temp: float = 0.0) -> None:
-        super().__init__()
-        self.gamma = gamma
-        self.min_temp = min_temp
-
-    def __call__(self, temp: float, iteration: int) -> None:
-        new_temp = temp - self.gamma
-        return new_temp if new_temp > self.min_temp else self.min_temp
 
 
 class CosineAnnealingScheduler(Scheduler):
@@ -91,7 +78,7 @@ class CosineAnnealingScheduler(Scheduler):
 
         self.gamma = gamma
 
-    def __call__(self, temp: float, iteration: int) -> None:
+    def __call__(self, temp: float, iteration: int) -> float:
         x = math.pi * (iteration / self.iter_per_cycle) % math.pi
         temp = self.temp_min + 0.5 * (self.temp_max - self.temp_min) * (
             1.0 + math.cos(x)
