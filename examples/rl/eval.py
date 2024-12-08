@@ -7,7 +7,7 @@ import numpy
 import gymnasium as gym
 import jax.numpy as jnp
 
-from src.model import mlp
+from src.model import model 
 from src.custom_types import Params
 
 
@@ -77,5 +77,5 @@ if __name__ == "__main__":
     args = argument_parser()
     params = load_model_checkpoint(ckpt_dir=args.ckpt_dir)
     env = gym.make(args.env_name, render_mode="human")
-    test(env=env, model=mlp, params=params, num_rollouts=args.num_rollouts)
+    test(env=env, model=model, params=params, num_rollouts=args.num_rollouts)
     env.close()
