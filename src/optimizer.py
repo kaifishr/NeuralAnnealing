@@ -44,7 +44,6 @@ class Optimizer:
         self.params_new = self._copy_params(params=self.params)
 
         # Parameters for simulated annealing.
-        self.gamma = config["gamma"]
         self.momentum = config["momentum"]
         self.temp_start = config["temp_start"]
         self.temp_final = config["temp_final"]
@@ -105,15 +104,18 @@ class Optimizer:
     @jax.jit
     def _copy_params(params: list[tuple[jax.Array, jax.Array]]):
         return [(jnp.array(w), jnp.array(b)) for w, b in params]
-
-    def run(
-        self,
-    ):
-        raise NotImplementedError()
-
+ 
     def _save_params(self) -> None:
         with open(self.output_dir / "ckpt.pkl", "wb") as fp:
             pickle.dump(self.params, fp)
+
+    def _step(self):
+        raise NotImplementedError()
+
+    def run(
+        self
+    ):
+        raise NotImplementedError()
 
 
 class DLOptimizer(Optimizer):
@@ -137,61 +139,57 @@ class DLOptimizer(Optimizer):
         self.test_generator = dataset.get_test_dataloader()
         self.dim_outputs = config["dim_output"]
 
+    def _step(self, x, y, temp: float) -> tuple[float, float, jax.Array]:
+        target = one_hot(y, self.dim_outputs)
+
+        logits = self.model(self.params, x)
+        loss_old = self.criterion(target=target, logits=logits)
+
+        self.params_new = self._copy_params(params=self.params)
+        self.params_new = self._perturb(
+            key=self.key,
+            params=self.params_new,
+            perturbation_prob=self.perturbation_prob,
+            perturbation_size=self.perturbation_size,
+        )
+        logits = self.model(self.params_new, x)
+        loss_new = self.criterion(target=target, logits=logits)
+
+        diff_loss = loss_new - loss_old
+        if diff_loss < 0.0:
+            self.params = self._update(
+                params=self.params,
+                params_new=self.params_new,
+                momentum=self.momentum,
+            )
+        elif random.random() < math.exp(-diff_loss / temp):
+            self.params = self._update(
+                params=self.params,
+                params_new=self.params_new,
+                momentum=self.momentum,
+            )
+
+        return loss_new, diff_loss, logits
+
     def run(self):
 
         temp = self.temp_start
         iteration = 0
 
         while temp > self.temp_final:
-
-            start_time = time.time()
-
-            running_iter = 0
+            
             running_loss = 0.0
             running_accuracy = 0.0
             running_counter = 0
-            num_accept = 0
-            num_permut = 0
+
+            start_time = time.time()
 
             for x, y in self.training_generator:
-                target = one_hot(y, self.dim_outputs)
-
-                logits = self.model(self.params, x)
-                loss_old = self.criterion(target=target, logits=logits)
-
-                self.params_new = self._copy_params(params=self.params)
-                self.params_new = self._perturb(
-                    key=self.key,
-                    params=self.params_new,
-                    perturbation_prob=self.perturbation_prob,
-                    perturbation_size=self.perturbation_size,
-                )
-                logits = self.model(self.params_new, x)
-                loss_new = self.criterion(target=target, logits=logits)
-
-                delta_loss = loss_new - loss_old
-
-                if delta_loss < 0.0:
-                    self.params = self._update(
-                        params=self.params,
-                        params_new=self.params_new,
-                        momentum=self.momentum,
-                    )
-                    num_accept += 1
-                elif random.random() < math.exp(-delta_loss / temp):
-                    self.params = self._update(
-                        params=self.params,
-                        params_new=self.params_new,
-                        momentum=self.momentum,
-                    )
-                    num_permut += 1
-
+                loss, diff_loss, logits = self._step(x=x, y=y, temp=temp)
                 batch_accuracy = float(jnp.sum(y == jnp.argmax(logits, axis=1)))
-
-                running_loss += float(loss_old)
+                running_loss += float(loss)
                 running_accuracy += batch_accuracy
                 running_counter += len(x)
-                running_iter += 1
 
             iteration_time = time.time() - start_time
 
@@ -200,9 +198,9 @@ class DLOptimizer(Optimizer):
                     "train/running_loss": running_loss / running_counter,
                     "train/running_accuracy": running_accuracy / running_counter,
                     "train/time_per_iteration": iteration_time,
-                    "train/prob_accept": num_accept / running_iter,
-                    "train/prob_permut": num_permut / running_iter,
                     "train/temperature": temp,
+                    "train/diff_loss": diff_loss,
+                    "train/exp_argument": diff_loss / temp,
                 }
                 self.logger.write(stats=stats, iteration=iteration)
 
@@ -256,6 +254,47 @@ class RLOptimizer(Optimizer):
             config=config,
         )
         self.num_rollouts = config["num_rollouts"]
+ 
+    def _step(self, temp: float) -> tuple[float, float]:
+        self.key, subkey = jax.random.split(key=self.key)
+        reward = self.dataset.rollout(
+            key=subkey,
+            model=self.model,
+            params=self.params,
+            num_rollouts=self.num_rollouts,
+        )
+        score_old = self.criterion(reward)
+
+        self.params_new = self._copy_params(params=self.params)
+        self.params_new = self._perturb(
+            key=self.key,
+            params=self.params_new,
+            perturbation_prob=self.perturbation_prob,
+            perturbation_size=self.perturbation_size,
+        )
+        reward = self.dataset.rollout(
+            key=subkey,
+            model=self.model,
+            params=self.params_new,
+            num_rollouts=self.num_rollouts,
+        )
+        score_new = self.criterion(reward)
+
+        diff_score = score_new - score_old
+        if diff_score < 0.0:
+            self.params = self._update(
+                params=self.params,
+                params_new=self.params_new,
+                momentum=self.momentum,
+            )
+        elif random.random() < math.exp(-diff_score / temp):
+            self.params = self._update(
+                params=self.params,
+                params_new=self.params_new,
+                momentum=self.momentum,
+            )
+
+        return reward, diff_score
 
     def run(self):
 
@@ -267,45 +306,7 @@ class RLOptimizer(Optimizer):
             running_iter = 0
             running_reward = 0.0
 
-            self.key, subkey = jax.random.split(key=self.key)
-            reward = self.dataset.rollout(
-                key=subkey,
-                model=self.model,
-                params=self.params,
-                num_rollouts=self.num_rollouts,
-            )
-            score_old = self.criterion(reward)
-
-            self.params_new = self._copy_params(params=self.params)
-            self.params_new = self._perturb(
-                key=self.key,
-                params=self.params_new,
-                perturbation_prob=self.perturbation_prob,
-                perturbation_size=self.perturbation_size,
-            )
-
-            reward = self.dataset.rollout(
-                key=subkey,
-                model=self.model,
-                params=self.params_new,
-                num_rollouts=self.num_rollouts,
-            )
-            score_new = self.criterion(reward)
-
-            delta_loss = score_new - score_old
-
-            if delta_loss < 0.0:
-                self.params = self._update(
-                    params=self.params,
-                    params_new=self.params_new,
-                    momentum=self.momentum,
-                )
-            elif random.random() < math.exp(-delta_loss / temp):
-                self.params = self._update(
-                    params=self.params,
-                    params_new=self.params_new,
-                    momentum=self.momentum,
-                )
+            reward, diff_score = self._step(temp=temp)
 
             running_reward += reward
             running_iter += 1
@@ -318,6 +319,8 @@ class RLOptimizer(Optimizer):
                     "train/running_reward": running_reward,
                     "train/time_per_iteration": iteration_time,
                     "train/temperature": temp,
+                    "train/diff_score": diff_score,
+                    "train/exp_argument": diff_score / temp,
                 }
                 self.logger.write(stats=stats, iteration=iteration)
 
