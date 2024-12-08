@@ -8,7 +8,11 @@ class Criterion:
     def __init__(self) -> None:
         pass
 
-    def __call__(self, **kwargs) -> jax.Array:
+    @staticmethod
+    def _symlog(score: jax.Array) -> jax.Array:
+        return jnp.sign(score) * jnp.log(jnp.abs(score) + 1.0)
+
+    def __call__(self) -> jax.Array:
         raise NotImplementedError
 
 
@@ -19,7 +23,8 @@ class MSELoss(Criterion):
 
     @partial(jax.jit, static_argnames=["self"])
     def __call__(self, target: jax.Array, pred: jax.Array) -> jax.Array:
-        return jnp.mean(jnp.square(target - pred))
+        score = jnp.mean(jnp.square(target - pred))
+        return self._symlog(score=score)
 
 
 class CrossEntropyLoss(Criterion):
@@ -30,7 +35,8 @@ class CrossEntropyLoss(Criterion):
     @partial(jax.jit, static_argnames=["self"])
     def __call__(self, target: jax.Array, logits: jax.Array) -> jax.Array:
         log_probs = log_softmax(logits)
-        return -jnp.mean(jnp.sum(target * log_probs, axis=-1))
+        score = -jnp.mean(jnp.sum(target * log_probs, axis=-1))
+        return self._symlog(score=score)
 
 
 class MaxScore(Criterion):
@@ -40,4 +46,5 @@ class MaxScore(Criterion):
 
     @partial(jax.jit, static_argnames=["self"])
     def __call__(self, score: jax.Array) -> jax.Array:
-        return -jnp.sign(score) * jnp.log(jnp.abs(score) + 1.0)
+        score = -1.0 * score
+        return self._symlog(score)
