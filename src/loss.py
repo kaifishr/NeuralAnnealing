@@ -40,4 +40,4 @@ class MaxScore(Criterion):
 
     @partial(jax.jit, static_argnames=["self"])
     def __call__(self, score: jax.Array) -> jax.Array:
-        return -score
+        return -jnp.sign(score) * jnp.log(jnp.abs(score) + 1.0)
