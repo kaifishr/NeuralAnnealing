@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 
-from .custom_types import Params
+from src.custom_types import Params
 
 
 def init_params(key: jax.Array, dims: list[int]) -> Params:

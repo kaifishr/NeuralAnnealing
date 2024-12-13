@@ -1,6 +1,5 @@
 import jax
 import jax.numpy as jnp
-from jax.nn import log_softmax
 from functools import partial
 
 
@@ -22,8 +21,8 @@ class MSELoss(Criterion):
         super().__init__()
 
     @partial(jax.jit, static_argnames=["self"])
-    def __call__(self, target: jax.Array, pred: jax.Array) -> jax.Array:
-        score = jnp.mean(jnp.square(target - pred))
+    def __call__(self, target: jax.Array, logits: jax.Array) -> jax.Array:
+        score = jnp.mean(jnp.square(target - logits))
         return self._symlog(score=score)
 
 
@@ -34,7 +33,7 @@ class CrossEntropyLoss(Criterion):
 
     @partial(jax.jit, static_argnames=["self"])
     def __call__(self, target: jax.Array, logits: jax.Array) -> jax.Array:
-        log_probs = log_softmax(logits)
+        log_probs = jax.nn.log_softmax(logits, axis=-1)
         score = -jnp.mean(jnp.sum(target * log_probs, axis=-1))
         return self._symlog(score=score)
 

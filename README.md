@@ -21,7 +21,7 @@ python -m examples.rl.eval
 ### Image Classification
 
 ```
-python -m examples.ml.train
+python -m examples.dl.train
 ```
 
 ## Simulated Annealing

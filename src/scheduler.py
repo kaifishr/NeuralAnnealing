@@ -5,11 +5,11 @@ class Scheduler:
     """Abstract scheduler class."""
 
     def __init__(
-        self,
+        self
     ) -> None:
         """Initializes abstract scheduler class."""
 
-    def __call__(self, temp: float, iteration: int) -> float:
+    def __call__(self) -> float:
         raise NotImplementedError
 
 

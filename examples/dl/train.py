@@ -3,10 +3,10 @@ import jax
 
 from src.utils import set_random_seed
 from src.dataloader import DataStore
-from src.loss import CrossEntropyLoss
+from src.loss import CrossEntropyLoss, MSELoss
 from src.model import model
-from src.optimizer import DLOptimizer
 from src.scheduler import ExponentialScheduler
+from src.optimizer.optimizer_dl import DLOptimizer
 
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.1"
 
@@ -16,21 +16,21 @@ def train():
     config = {
         "seed": 1234,
         "device": "gpu",
-        "dataset": "fashion_mnist",  # mnist, fashion_mnist
+        "dataset": "mnist",  # mnist, fashion_mnist
         "dim_input": 28**2,
         "dim_output": 10,
-        "dim_hidden": [128, 128],
-        "batch_size": 500,
+        "dim_hidden": 2 * [128],
+        "batch_size": 100,
         "num_workers": 2,
-        "temp_start": 0.002,
-        "temp_final": 1e-9,
-        "momentum": 0.2,
+        "temp_start": 0.01,
+        "temp_final": 1e-7,
+        "gamma": 0.005,
         "perturbation_prob": 0.02,
         "perturbation_size": 0.02,
-        "gamma": 0.003,
+        "momentum": 0.7,
         "train_stats_every_n_iter": 1,
-        "test_stats_every_n_iter": 20,
-        "output_dir": "output/ml",
+        "test_stats_every_n_iter": 10,
+        "output_dir": "output/dl",
     }
 
     set_random_seed(seed=config["seed"])
