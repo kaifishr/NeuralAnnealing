@@ -2,62 +2,41 @@ import math
 
 
 class Scheduler:
-    """Abstract scheduler class."""
 
     def __init__(
-        self
+        self,
+        temp_start: float,
+        temp_final: float = None,
+        gamma: float = None,
     ) -> None:
-        """Initializes abstract scheduler class."""
-
-    def __call__(self) -> float:
-        raise NotImplementedError
-
-
-class PowerScheduler(Scheduler):
-    """Decays the temperature by gamma every iteration."""
-
-    def __init__(self, gamma: float) -> None:
-        super().__init__()
+        self.temp_start = temp_start
+        self.temp_final = temp_final
         self.gamma = gamma
 
     def __call__(self, temp: float, iteration: int) -> float:
-        return temp * self.gamma**iteration
+        raise NotImplementedError
+
+
+class GeometricScheduler(Scheduler):
+
+    def __init__(self, temp_start: float, temp_final: float, gamma: float) -> None:
+        super().__init__(temp_start=temp_start, temp_final=temp_final, gamma=gamma)
+
+    def __call__(self, temp: float, iteration: int) -> float:
+        temp = self.gamma * temp
+        if self.temp_final:
+            temp = max(self.temp_final, temp)
+        return temp
 
 
 class ExponentialScheduler(Scheduler):
     """Decays temperature exponentially."""
 
     def __init__(self, gamma: float, temp_start: float, temp_final: float) -> None:
-        super().__init__()
-        self.gamma = gamma
-        self.temp_start = temp_start
-        self.temp_final = temp_final
-        self.total_iterations = None
-
-        self._print_info()
-
-    def _print_info(self) -> None:
-        self.total_iterations = int(
-            math.ceil((1.0 / self.gamma) * math.log(self.temp_start / self.temp_final))
-            + 1
-        )
-        print(f"Required iterations: {self.total_iterations}")
+        super().__init__(temp_start=temp_start, temp_final=temp_final, gamma=gamma)
 
     def __call__(self, temp: float, iteration: int) -> float:
-        temp = self.temp_start * math.exp(-self.gamma * iteration)
-        return temp
-
-
-class LinearScheduler(Scheduler):
-    """Linear temperature decays."""
-
-    def __init__(self, temp_initial: float, iterations_max: int) -> None:
-        super().__init__()
-        self.temp_initial = temp_initial
-        self.iterations_max = iterations_max
-
-    def __call__(self, temp: float, iteration: int) -> None:
-        return self.temp_initial - iteration * (self.temp_initial / self.iterations_max)
+        return self.temp_start * math.exp(-self.gamma * iteration)
 
 
 class CosineAnnealingScheduler(Scheduler):
@@ -69,18 +48,15 @@ class CosineAnnealingScheduler(Scheduler):
     """
 
     def __init__(
-        self, temp_min: float, temp_max: float, iter_per_cycle: int, gamma: float = None
+        self, temp_start: float, temp_max: float, iter_per_cycle: int, gamma: float = None,
     ) -> None:
-        super().__init__()
-        self.temp_min = temp_min
+        super().__init__(temp_start=temp_start, gamma=gamma)
         self.temp_max = temp_max
         self.iter_per_cycle = iter_per_cycle
 
-        self.gamma = gamma
-
     def __call__(self, temp: float, iteration: int) -> float:
         x = math.pi * (iteration / self.iter_per_cycle) % math.pi
-        temp = self.temp_min + 0.5 * (self.temp_max - self.temp_min) * (
+        temp = self.temp_start + 0.5 * (self.temp_max - self.temp_start) * (
             1.0 + math.cos(x)
         )
         if self.gamma:

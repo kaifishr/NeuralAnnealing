@@ -36,7 +36,6 @@ class Optimizer:
         self.params = init_params(key=self.key, dims=layer_dims)
         self.params_new = self._copy_params(params=self.params)
 
-        # Parameters for simulated annealing.
         self.momentum = config["momentum"]
         self.temp_start = config["temp_start"]
         self.temp_final = config["temp_final"]

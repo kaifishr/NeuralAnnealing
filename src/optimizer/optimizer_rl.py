@@ -120,14 +120,12 @@ class RLOptimizer(Optimizer):
             iteration=iteration,
         )
         self._save_params()
-        self.writer.close()
 
     def _write_full_eval(
-        self, key: jax.Array, model, params: Params, iteration: int
+        self, key: jax.Array, model, params: Params, iteration: int, num_test_rollouts: int = 40,
     ) -> None:
-        num_test_episodes = 20
         rewards = []
-        for _ in range(num_test_episodes):
+        for _ in range(num_test_rollouts):
             key, subkey = jax.random.split(key=key)
             reward = self.dataset.rollout(key=subkey, model=model, params=params)
             rewards.append(float(reward))
@@ -138,4 +136,4 @@ class RLOptimizer(Optimizer):
             "test/std_reward": reward_std,
         }
         self.logger.write(stats=stats, iteration=iteration)
-        print(f"{iteration = } {reward_mean = } {reward_std = }")
+        print(f"{iteration = } {reward_mean = :.2f} {reward_std = :.2f}")
