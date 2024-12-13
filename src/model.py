@@ -12,7 +12,9 @@ def init_params(key: jax.Array, dims: list[int]) -> Params:
     ]
 
 
-def _init_params(fan_in: int, fan_out: int, key: jax.Array) -> tuple[jax.Array, jax.Array]:
+def _init_params(
+    fan_in: int, fan_out: int, key: jax.Array
+) -> tuple[jax.Array, jax.Array]:
     w_key, _ = jax.random.split(key)
     scale = jnp.sqrt(2.0 / fan_in)
     w = scale * jax.random.normal(w_key, (fan_out, fan_in))

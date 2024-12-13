@@ -122,7 +122,12 @@ class RLOptimizer(Optimizer):
         self._save_params()
 
     def _write_full_eval(
-        self, key: jax.Array, model, params: Params, iteration: int, num_test_rollouts: int = 40,
+        self,
+        key: jax.Array,
+        model,
+        params: Params,
+        iteration: int,
+        num_test_rollouts: int = 40,
     ) -> None:
         rewards = []
         for _ in range(num_test_rollouts):

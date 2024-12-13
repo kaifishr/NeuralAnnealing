@@ -30,7 +30,6 @@ class GeometricScheduler(Scheduler):
 
 
 class ExponentialScheduler(Scheduler):
-    """Decays temperature exponentially."""
 
     def __init__(self, gamma: float, temp_start: float, temp_final: float) -> None:
         super().__init__(temp_start=temp_start, temp_final=temp_final, gamma=gamma)
@@ -40,15 +39,17 @@ class ExponentialScheduler(Scheduler):
 
 
 class CosineAnnealingScheduler(Scheduler):
-    """Temperature decays.
-
+    """
     See also https://arxiv.org/pdf/1608.03983.pdf
     for cosine annealing schedule for gradient descent.
-
     """
 
     def __init__(
-        self, temp_start: float, temp_max: float, iter_per_cycle: int, gamma: float = None,
+        self,
+        temp_start: float,
+        temp_max: float,
+        iter_per_cycle: int,
+        gamma: float = None,
     ) -> None:
         super().__init__(temp_start=temp_start, gamma=gamma)
         self.temp_max = temp_max

@@ -7,7 +7,7 @@ import numpy
 import gymnasium as gym
 import jax.numpy as jnp
 
-from src.model import model 
+from src.model import model
 from src.custom_types import Params
 
 
