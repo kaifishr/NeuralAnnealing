@@ -55,7 +55,7 @@ class Optimizer:
     def _update(
         params: Params, params_new: Params, momentum: Optional[float] = None
     ) -> list[tuple[jax.Array]]:
-        if momentum is not None:
+        if momentum is not None or momentum > 0.:
             eta = momentum
             return [
                 (eta * w + (1.0 - eta) * w_new, eta * b + (1.0 - eta) * b_new)

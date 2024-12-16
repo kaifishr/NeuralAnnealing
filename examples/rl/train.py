@@ -6,7 +6,7 @@ import gymnasium as gym
 from src.utils import set_random_seed
 from src.loss import MaxScore
 from src.model import model
-from src.scheduler import ExponentialScheduler
+from src.scheduler import GeometricScheduler
 from src.dataloader import RLDataset
 from src.optimizer.optimizer_rl import RLOptimizer
 
@@ -18,23 +18,20 @@ def train():
     config = {
         "seed": 1234,
         "device": "cpu",
-        ## "env_name": "LunarLander-v3",  # CartPole-v1, Acrobot-v1, LunarLander-v3, BipedalWalker-v3
-        "env_name": "BipedalWalker-v3",  # CartPole-v1, Acrobot-v1, LunarLander-v3, BipedalWalker-v3
-        "num_rollouts": 4,  # 3
-        "max_len_rollout": 400,
-        ## "dim_input": 8,  # 4, 6, 8, 24
-        ## "dim_output": 4,  # 2, 3, 4, 4
-        "dim_input": 24,  # 4, 6, 8, 24
+        "env_name": "LunarLander-v3",  # CartPole-v1, Acrobot-v1, LunarLander-v3, BipedalWalker-v3
+        "num_rollouts": 2,
+        "max_len_rollout": 200,
+        "dim_input": 8,  # 4, 6, 8, 24
         "dim_output": 4,  # 2, 3, 4, 4
-        "dim_hidden": 2 * [128],
+        "dim_hidden": 2 * [64],
         "temp_start": 0.02,
-        "temp_final": 1e-7,
-        "gamma": 0.0001,
+        "temp_final": 1e-5,
+        "gamma": 0.99999,
         "perturbation_prob": 0.02,
         "perturbation_size": 0.02,
-        "momentum": 0.01,
+        "momentum": 0.0,
         "train_stats_every_n_iter": 50,
-        "test_stats_every_n_iter": 500,
+        "test_stats_every_n_iter": 200,
         "output_dir": "output",
     }
 
@@ -48,7 +45,7 @@ def train():
 
     criterion = MaxScore()
 
-    scheduler = ExponentialScheduler(
+    scheduler = GeometricScheduler(
         gamma=config["gamma"],
         temp_start=config["temp_start"],
         temp_final=config["temp_final"],
