@@ -28,7 +28,6 @@ class RLOptimizer(Optimizer):
             dataset=rl_dataset,
             config=config,
         )
-        self.num_rollouts = config["num_rollouts"]
 
     def _step(self, temp: float) -> tuple[float, float]:
         self.key, subkey = jax.random.split(key=self.key)
@@ -36,7 +35,6 @@ class RLOptimizer(Optimizer):
             key=subkey,
             model=self.model,
             params=self.params,
-            num_rollouts=self.num_rollouts,
         )
         score_old = self.criterion(reward)
 
@@ -51,7 +49,6 @@ class RLOptimizer(Optimizer):
             key=subkey,
             model=self.model,
             params=self.params_new,
-            num_rollouts=self.num_rollouts,
         )
         score_new = self.criterion(reward)
 
@@ -90,8 +87,7 @@ class RLOptimizer(Optimizer):
 
             if (iteration + 1) % self.train_stats_every_n_iter == 0:
                 stats = {
-                    "train/rollouts_per_second": self.num_rollouts / iteration_time,
-                    "train/running_reward": running_reward,
+                    "train/running_reward_per_env_step": running_reward,
                     "train/time_per_iteration": iteration_time,
                     "train/temperature": temp,
                     "train/diff_score": diff_score,
@@ -133,12 +129,12 @@ class RLOptimizer(Optimizer):
         for _ in range(num_test_rollouts):
             key, subkey = jax.random.split(key=key)
             reward = self.dataset.rollout(key=subkey, model=model, params=params)
-            rewards.append(float(reward))
-        reward_mean = float(numpy.array(rewards).mean())
-        reward_std = float(numpy.array(rewards).std())
+            rewards.append(reward)
+        reward_mean = numpy.array(rewards).mean().item()
+        reward_std = numpy.array(rewards).std().item()
         stats = {
-            "test/avg_reward": reward_mean,
-            "test/std_reward": reward_std,
+            "test/avg_reward_per_env_step": reward_mean,
+            "test/std_reward_per_env_step": reward_std,
         }
         self.logger.write(stats=stats, iteration=iteration)
         print(f"{iteration = } {reward_mean = :.2f} {reward_std = :.2f}")

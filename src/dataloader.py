@@ -1,10 +1,11 @@
 import pathlib
 
-import gymnasium as gym
 import numpy
 import torch
-import jax.numpy as jnp
 import jax
+import jax.numpy as jnp
+import gymnasium as gym
+
 from torch.utils.data import DataLoader
 from torchvision.datasets import FashionMNIST, MNIST
 from torchvision import transforms
@@ -134,45 +135,47 @@ class DataStore:
         return test_dataloader
 
 
-class RLDataset:
+class RolloutWorker:
 
-    def __init__(self, env: gym.Env, max_len_rollout: int = 400):
-        self.env = env
-        self.max_len_rollout = max_len_rollout
-        if isinstance(env.action_space, gym.spaces.Discrete):
+    def __init__(self, env_name: str, num_envs: int = 1, max_env_steps: int = 200):
+
+        self.num_envs = num_envs
+        self.max_steps = self.num_envs * max_env_steps
+
+        def make_env() -> gym.Env:
+            return gym.make(id=env_name)
+        
+        self.envs = gym.vector.AsyncVectorEnv([make_env for _ in range(num_envs)])
+
+        if isinstance(self.envs.action_space, gym.spaces.MultiDiscrete):
             self.is_discrete = True
-        elif isinstance(env.action_space, gym.spaces.Box):
+        elif isinstance(self.envs.action_space, gym.spaces.Box):
             self.is_discrete = False
         else:
             raise NotImplementedError(
-                f"Action space '{env.action_space}' not supported."
+                f"Action space '{self.envs.action_space}' not supported."
             )
 
     def __del__(self):
-        self.env.close()
+        self.envs.close()
 
     def _rollout(self, seed: int, model, params: Params) -> float:
-        observation, info = self.env.reset(seed=seed)
+        observations, infos = self.envs.reset(seed=seed)
         total_reward = 0
-        for _ in range(self.max_len_rollout):
-            observation = jnp.atleast_2d(observation)
-            action = model(params, observation)
+        total_steps = 0
+        while total_steps < self.max_steps: 
+            prediction = model(params, observations)
             if self.is_discrete:
-                action = int(jnp.argmax(action, axis=-1)[0])
+                actions = jnp.argmax(prediction, axis=-1).tolist()
             else:
-                action = numpy.array(jax.nn.tanh(action)[0])
-            observation, reward, terminated, truncated, info = self.env.step(action)
-            total_reward += reward
-            if terminated or truncated:
+                actions = jax.nn.tanh(prediction).tolist()
+            observations, rewards, terminations, truncations, infos = self.envs.step(actions)
+            total_reward += rewards.sum().item()
+            total_steps += len(rewards)
+            if terminations.any() or truncations.any():
                 break
-        return total_reward
+        return total_reward / total_steps
 
-    def rollout(
-        self, key: jax.Array, model, params: Params, num_rollouts: int = 1
-    ) -> float:
-        total_rewards = 0.0
-        for _ in range(num_rollouts):
-            key, subkey = jax.random.split(key=key)
-            seed = int(subkey[0])
-            total_rewards += self._rollout(seed=seed, model=model, params=params)
-        return total_rewards / num_rollouts
+    def rollout(self, key: jax.Array, model, params: Params) -> float:
+        rewards = self._rollout(seed=int(key[0]), model=model, params=params)
+        return rewards
