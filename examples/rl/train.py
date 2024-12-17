@@ -25,7 +25,7 @@ def train():
         "dim_hidden": 2 * [64],
         "temp_start": 0.02,
         "temp_final": 1e-5,
-        "gamma": 0.99999,
+        "gamma": 0.9999,
         "perturbation_prob": 0.02,
         "perturbation_size": 0.02,
         "momentum": 0.0,
