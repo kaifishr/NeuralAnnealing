@@ -3,7 +3,6 @@ import pickle
 import pathlib
 
 import jax
-import numpy
 import gymnasium as gym
 import jax.numpy as jnp
 
@@ -32,11 +31,11 @@ def test(
         is_done = False
         while not is_done:
             observation = jnp.atleast_2d(observation)
-            action = model(params, observation)
+            prediction = model(params, observation)
             if is_discrete:
-                action = int(jnp.argmax(action, axis=-1)[0])
+                action = jnp.argmax(prediction, axis=-1).item()
             else:
-                action = numpy.array(jax.nn.tanh(action)[0])
+                action = jax.nn.tanh(prediction)[0].tolist()
             observation, reward, terminated, truncated, info = env.step(action)
             total_reward += float(reward)
             total_steps += 1

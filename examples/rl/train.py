@@ -18,12 +18,12 @@ def train():
         "seed": 1234,
         "device": "cpu",
         "env_name": "LunarLander-v3",  # CartPole-v1, Acrobot-v1, LunarLander-v3, BipedalWalker-v3
-        "num_envs": 16,
-        "max_env_steps": 100,
+        "num_envs": 64,
+        "max_env_steps": 200,
         "dim_input": 8,  # 4, 6, 8, 24
         "dim_output": 4,  # 2, 3, 4, 4
         "dim_hidden": 2 * [64],
-        "temp_start": 0.02,
+        "temp_start": 0.01,
         "temp_final": 1e-5,
         "gamma": 0.9999,
         "perturbation_prob": 0.02,

@@ -144,7 +144,7 @@ class RolloutWorker:
 
         def make_env() -> gym.Env:
             return gym.make(id=env_name)
-        
+
         self.envs = gym.vector.AsyncVectorEnv([make_env for _ in range(num_envs)])
 
         if isinstance(self.envs.action_space, gym.spaces.MultiDiscrete):
@@ -163,13 +163,15 @@ class RolloutWorker:
         observations, infos = self.envs.reset(seed=seed)
         total_reward = 0
         total_steps = 0
-        while total_steps < self.max_steps: 
+        while total_steps < self.max_steps:
             prediction = model(params, observations)
             if self.is_discrete:
                 actions = jnp.argmax(prediction, axis=-1).tolist()
             else:
                 actions = jax.nn.tanh(prediction).tolist()
-            observations, rewards, terminations, truncations, infos = self.envs.step(actions)
+            observations, rewards, terminations, truncations, infos = self.envs.step(
+                actions
+            )
             total_reward += rewards.sum().item()
             total_steps += len(rewards)
             if terminations.any() or truncations.any():
