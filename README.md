@@ -11,7 +11,7 @@ conda activate neural_annealing
 
 ## Run the Examples
 
-### Reinforcemnt Learning
+### Reinforcement Learning
 
 ```
 python -m examples.rl.train

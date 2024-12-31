@@ -8,10 +8,10 @@ dependencies:
   - libstdcxx-ng  # For box2d env
   - tensorboardx
   - pip:
-    - --upgrade pip
-    - --upgrade "jax[cuda12]"
+    - jax  # CPU-only. Use "jax[cuda12]" for GPU.
     - torch
     - torchvision
     - black
     - swig
     - gymnasium[box2d]
+    - tensorboard
